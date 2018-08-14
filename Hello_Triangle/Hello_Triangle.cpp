@@ -183,7 +183,7 @@ int esMain ( ESContext *esContext )
 	g_device = new ThreadESDevice(esContext);
    
 #endif
-	g_device->CreateWindow1 ( "Hello Triangle", 320, 240, ES_WINDOW_RGB );
+	g_device->CreateWindow1 ( "Hello Triangle", 480, 320, ES_WINDOW_RGB );
    //g_device->AcqiureThreadOwnerShip();
 #ifndef __APPLE__
    ((ThreadESDevice*)g_device)->Run();

@@ -3,7 +3,8 @@ set ( common_src Source/esShader.cpp
                  Source/esTransform.cpp
                  Source/esUtil.cpp
 				 ESDevice.cpp
-				 ThreadESDevice.cpp)
+				 ThreadESDevice.cpp
+				 Mesh.cpp)
 
 
 # Win32 Platform files

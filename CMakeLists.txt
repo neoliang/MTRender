@@ -1,6 +1,7 @@
 cmake_minimum_required( VERSION 2.6 )
 project( MTRender )
 
+add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 add_subdirectory(rapidjson)
 include_directories( External/Include )
 include_directories( Common/Include )
