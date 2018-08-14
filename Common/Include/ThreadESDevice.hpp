@@ -78,9 +78,8 @@ namespace RenderEngine {
 		Semaphore _presentSem;
 		Semaphore _ownerShipSem;
 		bool  _threaded;
-		bool _begin = false;
+		bool _isInPresenting;
 	public:
-		ThreadESDevice() { _begin = false; }
 		ThreadESDevice(ESContext* context);
 		~ThreadESDevice();
 		virtual void Cleanup();
@@ -100,6 +99,11 @@ namespace RenderEngine {
 		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh);
 		virtual void AcqiureThreadOwnerShip();
 		virtual void ReleaseThreadOwnership();
+		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+			std::vector<glm::vec2> uvs,
+			std::vector<unsigned short> indices);
+		virtual void DeleteVBO(VBO* vbo);
+		virtual void DrawVBO(VBO* vbo);
 		void WaitForSignal() {
 			_waitSem.WaitForSignal();
 
@@ -114,6 +118,7 @@ namespace RenderEngine {
 		void SignalPresent()
 		{
 			_presentSem.Signal();
+			_isInPresenting = false;
 		}
 		void WaitForOwnerShip()
 		{

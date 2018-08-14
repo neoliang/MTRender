@@ -49,6 +49,16 @@ namespace RenderEngine {
 	protected:
 		~ThreadedTexture2D() {}
 	};
+	class DeleteVBOCMD;
+	class ThreadedVBO : public VBO
+	{
+		friend class ThreadESDevice;
+		friend class DeleteVBOCMD;
+	public:
+		VBO * realVbo;
+	protected:
+		~ThreadedVBO() {}
+	};
 
 	class ClearCMD : public ThreadDeviceCommand
 	{
@@ -130,7 +140,44 @@ namespace RenderEngine {
 		}
 		void OnExecuteEnd(ThreadESDevice* threadDevice);
 	};
-
+	class DrawVBOCMD : public ThreadDeviceCommand
+	{
+	private:
+		ThreadedVBO * _vbo;
+	public:
+		DrawVBOCMD(ThreadedVBO* vbo) :_vbo(vbo) {}
+		void Execute(ESDevice* device)
+		{
+			device->DrawVBO(_vbo->realVbo);
+		}
+	};
+	class DeleteVBOCMD : public ThreadDeviceCommand
+	{
+	private:
+		ThreadedVBO * _vbo;
+	public:
+		DeleteVBOCMD(ThreadedVBO* vbo) :_vbo(vbo) {}
+		void Execute(ESDevice* device)
+		{
+			device->DeleteVBO(_vbo->realVbo);
+			delete _vbo;
+		}
+	};
+	class CreateVBOCMD : public ThreadDeviceCommand
+	{
+	private:
+		std::vector<glm::vec3> _vertices;
+		std::vector<glm::vec2> _uvs; 
+		std::vector<unsigned short> _indices;
+		ThreadedVBO * _vbo;
+	public:
+		CreateVBOCMD(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec2>& uvs, const std::vector<unsigned short>& indices, ThreadedVBO *vbo)
+			:_vertices(vertices), _uvs(uvs), _indices(indices), _vbo(vbo) {}
+		void Execute(ESDevice* device)
+		{
+			_vbo->realVbo = device->CreateVBO(_vertices, _uvs, _indices);
+		}
+	};
 	class UseTexture2DCMD : public ThreadDeviceCommand
 	{
 	private:
@@ -301,6 +348,7 @@ namespace RenderEngine {
 		_realDevice = new ESDeviceImp(context);
 		_threaded = false;
 		_quit = false;
+		_isInPresenting = false;
 	}
 	ThreadESDevice::~ThreadESDevice()
 	{
@@ -314,17 +362,18 @@ namespace RenderEngine {
 	}
 	void ThreadESDevice::BeginRender()
 	{
-		if (_begin)
-		{
-			WaitForPresent();
-		}
-		_begin = true;
 	}
 	void ThreadESDevice::Present()
 	{
+		if (_isInPresenting)
+		{
+			WaitForPresent();
+		}
+		_isInPresenting = true;
 		if (!_threaded)
 		{
 			_realDevice->Present();
+			_isInPresenting = false;
 			return;
 		}
 		{
@@ -332,6 +381,7 @@ namespace RenderEngine {
 				_commandQueue.push(new PresentCMD());
 		}
 	}
+
 	void ThreadESDevice::Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh)
 	{
 
@@ -436,6 +486,50 @@ namespace RenderEngine {
 		}
 		return program;
 	}
+	VBO* ThreadESDevice::CreateVBO(std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	{
+		auto vbo = new ThreadedVBO();
+		if (!_threaded)
+		{
+			vbo->realVbo = _realDevice->CreateVBO(vertices,uvs,indices);
+		}
+		else
+		{
+			CreateVBOCMD* cmd = new CreateVBOCMD(vertices,uvs,indices,vbo);
+			AUTOLOCK
+			_commandQueue.push(cmd);
+		}
+		return vbo;
+	}
+	void ThreadESDevice::DeleteVBO(VBO* vbo)
+	{
+		ThreadedVBO* threadedVbo = static_cast<ThreadedVBO*>(vbo);
+		if (!_threaded)
+		{
+			_realDevice->DeleteVBO(threadedVbo->realVbo);
+			delete threadedVbo;
+		}
+		else
+		{
+			DeleteVBOCMD* cmd = new DeleteVBOCMD(threadedVbo);
+			AUTOLOCK
+				_commandQueue.push(cmd);
+		}
+	}
+	void ThreadESDevice::DrawVBO(VBO* vbo)
+	{
+		ThreadedVBO* threadedVbo = static_cast<ThreadedVBO*>(vbo);
+		if (!_threaded)
+		{
+			_realDevice->DrawVBO(threadedVbo->realVbo);
+		}
+		else
+		{
+			AUTOLOCK
+				_commandQueue.push(new DrawVBOCMD(threadedVbo));
+		}
+	}
+
 	Texture2D* ThreadESDevice::CreateTexture2D(int width, int height, const void* data)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();

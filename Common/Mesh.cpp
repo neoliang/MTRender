@@ -2,7 +2,6 @@
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 #include "esUtil.h"
-
 using namespace RenderEngine;
 using namespace  rapidjson;
 std::vector<Mesh::Ptr> Mesh::LoadMeshFromFile(const std::string & file)

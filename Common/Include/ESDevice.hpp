@@ -51,6 +51,11 @@ namespace RenderEngine {
 		virtual void BeginRender() = 0;
 		virtual void Present() = 0;
 		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh) = 0;
+		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+			std::vector<glm::vec2> uvs,
+			std::vector<unsigned short> indices)=0;
+		virtual void DeleteVBO(VBO* vbo) = 0;
+		virtual void DrawVBO(VBO* vbo) = 0;
 		virtual void Cleanup() = 0;
 	};
 
@@ -85,6 +90,11 @@ namespace RenderEngine {
 		virtual void DrawLine(const std::vector<glm::vec3>& line);
 		virtual glm::vec3 Project(const glm::vec3& coord, const glm::mat4& transMat);
 		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh);
+		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+			std::vector<glm::vec2> uvs,
+			std::vector<unsigned short> indices);
+		virtual void DeleteVBO(VBO* vbo);
+		virtual void DrawVBO(VBO* vbo);
 	};
 }
 #endif /* ESDevice_hpp */

@@ -107,9 +107,9 @@ std::vector<glm::vec3> vVertices = { {0.0f,  0.5f, 0.0f},
 float angle = 0;
 void Draw ( ESContext *esContext )
 {
-	BeginProfile("g_device->BeginRender()");
+	//BeginProfile("g_device->BeginRender()");
 	g_device->BeginRender();
-	EndProfile();
+	//EndProfile();
 	g_device->SetViewPort(0, 0, esContext->width, esContext->height);
     
     // Clear the color buffer
@@ -137,21 +137,24 @@ void Shutdown ( ESContext *esContext )
 	g_device->Cleanup();
     delete g_device;
 }
-float g_fps = 0.0f;
+static double g_accTime = 0;
+static unsigned g_accCount = 0;
+static float g_fps = 0.0f;
 void Update(ESContext* esContext,float dt)
 {
-	if (g_fps <= 0.0f)
-	{
-		g_fps = 1.0f / dt;
-	}
-	else
-	{
-		g_fps = (g_fps + 1.0f / dt) / 2.0f;
-	}
+	++g_accCount;
+	g_accTime += dt;
+	float avgFps = 1.0f / (g_accTime / g_accCount);
+
+
+	float newFPs = 1.0f / dt;
+	float delta = newFPs - g_fps;
+	g_fps = newFPs;
 	for (auto mesh : meshes)
 	{
 		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y + dt*0.5f, mesh->rotation.z);
 	}
+	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f", avgFps, newFPs, delta);
 }
 void OnLostFocus()
 {

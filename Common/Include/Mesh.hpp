@@ -5,7 +5,29 @@
 #include <vector>
 #include "glm/glm.hpp"
 #include <memory>
+#include <GLES3/gl3.h>
 namespace RenderEngine {
+
+	class VBO
+	{
+	protected:
+		virtual ~VBO() {}
+
+	};
+	class ESDeviceImp;
+	class VBOImp : public VBO
+	{
+		friend class ESDeviceImp;
+	public:
+		GLuint vertexArrayID;
+		GLuint vertexbuffer;
+		GLuint uvbuffer;
+		GLuint elementbuffer;
+		GLuint elementSize;
+	protected:
+		~VBOImp() {}
+	};
+
 	class Mesh
 	{
 	public:

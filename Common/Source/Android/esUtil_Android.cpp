@@ -99,7 +99,7 @@ static void HandleCommand ( struct android_app *pApp, int32_t cmd )
 
          esContext->eglNativeDisplay = EGL_DEFAULT_DISPLAY;
          esContext->eglNativeWindow = pApp->window;
-
+		 esContext->platformData = (void *)pApp->activity->assetManager;
          // Call the main entrypoint for the app
          if ( esMain ( esContext ) != GL_TRUE )
          {
@@ -198,7 +198,7 @@ void android_main ( struct android_app *pApp )
       {
          continue;
       }
-	  usleep(30*1000);
+	  //usleep(30*1000);
       // Call app update function
       if ( esContext.updateFunc != NULL )
       {
