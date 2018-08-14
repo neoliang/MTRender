@@ -48,6 +48,7 @@ namespace RenderEngine {
 		virtual void SetViewPort(int x, int y, int width, int height) = 0;
 		virtual void AcqiureThreadOwnerShip() =0;
 		virtual void ReleaseThreadOwnership() =0;
+		virtual void BeginRender() = 0;
 		virtual void Present() = 0;
 		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh) = 0;
 		virtual void Cleanup() = 0;
@@ -78,6 +79,7 @@ namespace RenderEngine {
 		virtual void SetViewPort(int x, int y, int width, int height);
 		virtual void AcqiureThreadOwnerShip();
 		virtual void ReleaseThreadOwnership();
+		virtual void BeginRender() {};
 		virtual void Present();
 		virtual void Draw2DPoint(const glm::vec2& pos);
 		virtual void DrawLine(const std::vector<glm::vec3>& line);

@@ -187,6 +187,27 @@ GLboolean WinCreate ( ESContext *esContext, const char *title )
 //
 //      Start main windows loop
 //
+
+inline double clock_gettime_to_double()
+{
+	return GetTickCount() * 0.0001f;
+}
+
+double TimeSinceStartupImpl()
+{
+	static double sStartTime = 0;
+
+	if (sStartTime == 0)
+		sStartTime = clock_gettime_to_double();
+
+	return clock_gettime_to_double() - sStartTime;
+}
+
+float ESUTIL_API TimeSinceStartup()
+{
+	return TimeSinceStartupImpl();
+}
+
 void WinLoop ( ESContext *esContext )
 {
    MSG msg = { 0 };

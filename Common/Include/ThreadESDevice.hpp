@@ -78,8 +78,9 @@ namespace RenderEngine {
 		Semaphore _presentSem;
 		Semaphore _ownerShipSem;
 		bool  _threaded;
+		bool _begin = false;
 	public:
-		ThreadESDevice() {}
+		ThreadESDevice() { _begin = false; }
 		ThreadESDevice(ESContext* context);
 		~ThreadESDevice();
 		virtual void Cleanup();
@@ -94,6 +95,7 @@ namespace RenderEngine {
 		virtual void SetClearColor(float r, float g, float b, float alpha);
 		virtual void DrawTriangle(std::vector<glm::vec3>& vertices);
 		virtual void SetViewPort(int x, int y, int width, int height);
+		virtual void BeginRender();
 		virtual void Present();
 		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh);
 		virtual void AcqiureThreadOwnerShip();

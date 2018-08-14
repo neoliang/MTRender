@@ -447,3 +447,17 @@ char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, 
 
    return ( NULL );
 }
+
+
+static std::string s_tag = "";
+static float s_time;
+void ESUTIL_API BeginProfile(const std::string& tag)
+{
+	s_tag = tag;
+	s_time = TimeSinceStartup();
+}
+void ESUTIL_API EndProfile()
+{
+	float pastTime = TimeSinceStartup() - s_time;
+	esLogMessage("profile: %s cost :%f", s_tag.c_str(), pastTime);
+}

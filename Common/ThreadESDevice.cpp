@@ -312,6 +312,14 @@ namespace RenderEngine {
 		_thread.join();
 		delete _realDevice;
 	}
+	void ThreadESDevice::BeginRender()
+	{
+		if (_begin)
+		{
+			WaitForPresent();
+		}
+		_begin = true;
+	}
 	void ThreadESDevice::Present()
 	{
 		if (!_threaded)
@@ -323,7 +331,6 @@ namespace RenderEngine {
 			AUTOLOCK
 				_commandQueue.push(new PresentCMD());
 		}
-		WaitForPresent();
 	}
 	void ThreadESDevice::Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh)
 	{

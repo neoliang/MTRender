@@ -107,7 +107,9 @@ std::vector<glm::vec3> vVertices = { {0.0f,  0.5f, 0.0f},
 float angle = 0;
 void Draw ( ESContext *esContext )
 {
-
+	BeginProfile("g_device->BeginRender()");
+	g_device->BeginRender();
+	EndProfile();
 	g_device->SetViewPort(0, 0, esContext->width, esContext->height);
     
     // Clear the color buffer
@@ -116,8 +118,15 @@ void Draw ( ESContext *esContext )
 	g_device->UseGPUProgram(g_program);
     //g_device->DrawTriangle(vVertices);
     //g_device->DrawTriangle(vVertices1, sizeof(vVertices1)/sizeof(GLfloat));
-	g_device->Render(camera, meshes);
+	//BeginProfile("g_device->Render(camera, meshes);");
+	for (int i = 0; i < 40; ++i)
+	{
+		g_device->Render(camera, meshes);
+	}
+	//EndProfile();
+	//BeginProfile("g_device->Present();");
 	g_device->Present();
+	//EndProfile();
 }
 
 void Shutdown ( ESContext *esContext )
@@ -128,17 +137,26 @@ void Shutdown ( ESContext *esContext )
 	g_device->Cleanup();
     delete g_device;
 }
-
+float g_fps = 0.0f;
 void Update(ESContext* esContext,float dt)
 {
+	if (g_fps <= 0.0f)
+	{
+		g_fps = 1.0f / dt;
+	}
+	else
+	{
+		g_fps = (g_fps + 1.0f / dt) / 2.0f;
+	}
 	for (auto mesh : meshes)
 	{
-		mesh->rotation = vec3(mesh->rotation.x + 0.01f, mesh->rotation.y + 0.01f, mesh->rotation.z);
+		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y + dt*0.5f, mesh->rotation.z);
 	}
 }
 void OnLostFocus()
 {
-	esLogMessage("[render]OnLostFocus");
+	esLogMessage("[render]OnLostFocus fps %.3f",g_fps);
+	g_fps = 0.0f;
 	//g_device->AcqiureThreadOwnerShip();
 }
 void OnGainFocus()
@@ -173,6 +191,7 @@ void InitApp()
 	// 	   0,4,5,0,5,1,5,6,2,5,2,1,6,2,3,6,3,7
 	//    };
 }
+bool _multiThread = true;
 int esMain ( ESContext *esContext )
 {
 	esLogMessage("esMain ( ESContext *esContext )");
@@ -180,14 +199,26 @@ int esMain ( ESContext *esContext )
 #ifdef __APPLE__
 	g_device = new ESDeviceImp(esContext);
 #else
-	g_device = new ThreadESDevice(esContext);
-   
+	if (_multiThread)
+	{
+		g_device = new ThreadESDevice(esContext);
+	}
+	else
+	{
+		g_device = new ESDeviceImp(esContext);
+	}
 #endif
 	g_device->CreateWindow1 ( "Hello Triangle", 480, 320, ES_WINDOW_RGB );
-   //g_device->AcqiureThreadOwnerShip();
+	if (!_multiThread)
+	{
+		g_device->AcqiureThreadOwnerShip();
+	}
+	else
+	{
 #ifndef __APPLE__
-   ((ThreadESDevice*)g_device)->Run();
+		((ThreadESDevice*)g_device)->Run();
 #endif
+	}
    InitApp();
    if ( !Init (esContext  ) )
    {

@@ -317,6 +317,10 @@ void ESUTIL_API esOrtho ( ESMatrix *result, float left, float right, float botto
 //
 void ESUTIL_API esMatrixMultiply ( ESMatrix *result, ESMatrix *srcA, ESMatrix *srcB );
 
+float ESUTIL_API TimeSinceStartup();
+
+void ESUTIL_API BeginProfile(const std::string& tag);
+void ESUTIL_API EndProfile();
 
 std::string ESUTIL_API readFileData(const std::string& filename);
 //

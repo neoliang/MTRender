@@ -39,7 +39,8 @@
 //
 #include <android/log.h>
 #include <android_native_app_glue.h>
-#include <time.h>
+#include <sys/time.h>
+#include <unistd.h>
 #include "esUtil.h"
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "esUtil", __VA_ARGS__))
@@ -53,15 +54,30 @@
 extern int esMain ( ESContext *esContext );
 extern void OnLostFocus();
 extern void OnGainFocus();
-///
-// GetCurrentTime()
-//
-static float GetCurrentTime()
+
+
+
+
+inline double clock_gettime_to_double()
 {
-   struct timespec clockRealTime;
-   clock_gettime ( CLOCK_MONOTONIC, &clockRealTime );
-   double curTimeInSeconds = clockRealTime.tv_sec + ( double ) clockRealTime.tv_nsec / 1e9;
-   return ( float ) curTimeInSeconds;
+	timespec time;
+	clock_gettime(CLOCK_MONOTONIC, &time);
+	return time.tv_sec + (double)time.tv_nsec * 0.000000001;
+}
+
+double TimeSinceStartupImpl()
+{
+	static double sStartTime = 0;
+
+	if (sStartTime == 0)
+		sStartTime = clock_gettime_to_double();
+
+	return clock_gettime_to_double() - sStartTime;
+}
+
+float ESUTIL_API TimeSinceStartup()
+{
+	return TimeSinceStartupImpl();
 }
 
 ///
@@ -155,7 +171,7 @@ void android_main ( struct android_app *pApp )
    pApp->onAppCmd = HandleCommand;
    pApp->userData = &esContext;
 
-   lastTime = GetCurrentTime();
+   lastTime = TimeSinceStartupImpl();
 
    while ( 1 )
    {
@@ -182,11 +198,11 @@ void android_main ( struct android_app *pApp )
       {
          continue;
       }
-
+	  usleep(30*1000);
       // Call app update function
       if ( esContext.updateFunc != NULL )
       {
-         float curTime = GetCurrentTime();
+         float curTime = TimeSinceStartupImpl();
          float deltaTime =  ( curTime - lastTime );
          lastTime = curTime;
          esContext.updateFunc ( &esContext, deltaTime );
