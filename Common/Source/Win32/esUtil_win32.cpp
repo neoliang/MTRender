@@ -39,8 +39,10 @@
 //
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <synchapi.h>
 #include <stdlib.h>
 #include "esUtil.h"
+
 
 #ifdef _WIN64
 #define GWL_USERDATA GWLP_USERDATA
@@ -208,6 +210,10 @@ float ESUTIL_API TimeSinceStartup()
 	return TimeSinceStartupImpl();
 }
 
+void ESUTIL_API ESSleep(float sec)
+{
+	Sleep((DWORD)sec * 1000);
+}
 void WinLoop ( ESContext *esContext )
 {
    MSG msg = { 0 };

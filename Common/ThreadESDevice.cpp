@@ -58,6 +58,11 @@ namespace RenderEngine {
 		VBO * realVbo;
 	protected:
 		~ThreadedVBO() {}
+	public:
+		virtual VBO* GetRealVBO()
+		{
+			return realVbo;
+		}
 	};
 
 	class ClearCMD : public ThreadDeviceCommand

@@ -12,6 +12,8 @@ namespace RenderEngine {
 	{
 	protected:
 		virtual ~VBO() {}
+	public:
+		virtual VBO* GetRealVBO() = 0;
 
 	};
 	class ESDeviceImp;
@@ -26,6 +28,7 @@ namespace RenderEngine {
 		GLuint elementSize;
 	protected:
 		~VBOImp() {}
+		virtual VBO* GetRealVBO() { return this; }
 	};
 
 	class Mesh
@@ -42,6 +45,7 @@ namespace RenderEngine {
 		std::vector<unsigned short> indices;
 		glm::vec3 position;
 		glm::vec3 rotation;
+		VBO* vbo;
 		Mesh(const std::string& name_, int vericesCount, int indicesCount = 0)
 			:name(name_), position(0, 0, 0), rotation(0, 0, 0)
 		{

@@ -253,39 +253,7 @@ namespace RenderEngine {
 			auto wordlMat = w0 * w1;
 			auto mvp = projMat * viewMat* wordlMat;
 			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
-
-			GLuint vertexArrayID;
-			GLuint vertexbuffer;
-			GLuint uvbuffer;
-			GLuint elementbuffer;
-			glGenVertexArrays(1, &vertexArrayID);
-			glBindVertexArray(vertexArrayID);
-			
-			glGenBuffers(1, &vertexbuffer);
-			glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-			glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size() * sizeof(glm::vec3), &mesh->vertices[0], GL_STATIC_DRAW);		
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-			glGenBuffers(1, &uvbuffer);
-			glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-			glBufferData(GL_ARRAY_BUFFER, mesh->uvs.size() * sizeof(glm::vec2), &mesh->uvs[0], GL_STATIC_DRAW);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-
-			glGenBuffers(1, &elementbuffer);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size() * sizeof(unsigned short), &mesh->indices[0], GL_STATIC_DRAW);
-			glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_SHORT, (void*)0);
-
-
-			glDeleteBuffers(1, &vertexbuffer);
-			glDeleteBuffers(1, &elementbuffer);
-			glDeleteBuffers(1, &uvbuffer);
-			glDeleteVertexArrays(1, &vertexArrayID);
-
-
+			this->DrawVBO(mesh->vbo->GetRealVBO());
 		}
 	}
 	void ESDeviceImp::AcqiureThreadOwnerShip()

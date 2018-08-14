@@ -53,6 +53,10 @@ ESDevice* g_device;
 GPUProgram* g_program;
 Texture2D* g_texture;
 ///
+// Draw a triangle using the shader pair created in Init()
+std::vector<Mesh::Ptr> meshes; //= Mesh::Ptr(new Mesh("Cube", 8, 36));
+Camera::Ptr camera; //= Camera::Ptr(new Camera);
+///
 // Initialize the shader and program object
 //
 const std::string vShaderStr =
@@ -86,13 +90,14 @@ int Init (ESContext* esContext )
 	char *buffer = esLoadTGA(esContext->platformData, "Suzanne.tga", &width, &height);
 	g_texture = g_device->CreateTexture2D(width, height, buffer);
 	g_program = g_device->CreateGPUProgram(vShaderStr, fShaderStr);
+	for (auto mesh : meshes)
+	{
+		mesh->vbo = g_device->CreateVBO(mesh->vertices, mesh->uvs, mesh->indices);
+	}
     return 1;
 }
 
-///
-// Draw a triangle using the shader pair created in Init()
-std::vector<Mesh::Ptr> meshes; //= Mesh::Ptr(new Mesh("Cube", 8, 36));
-Camera::Ptr camera; //= Camera::Ptr(new Camera);
+
 
 glm::vec3 ovVertices[] = {
 	{ 0.0f,  0.5f, 0.0f },
@@ -134,6 +139,10 @@ void Shutdown ( ESContext *esContext )
 	esLogMessage("Shutdown");
     g_device->DeletGPUProgram(g_program);
 	g_device->DeleteTexture2D(g_texture);
+	for (auto mesh : meshes)
+	{
+		g_device->DeleteVBO(mesh->vbo);
+	}
 	g_device->Cleanup();
     delete g_device;
 }
@@ -155,6 +164,7 @@ void Update(ESContext* esContext,float dt)
 		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y + dt*0.5f, mesh->rotation.z);
 	}
 	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f", avgFps, newFPs, delta);
+	ESSleep(0.02f);
 }
 void OnLostFocus()
 {

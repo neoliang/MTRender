@@ -216,7 +216,10 @@ void android_main ( struct android_app *pApp )
    }
 }
 
-
+void ESUTIL_API ESSleep(float sec)
+{
+	usleep(sec * 1000 * 1000);
+}
 ///
 //  WinCreate()
 //

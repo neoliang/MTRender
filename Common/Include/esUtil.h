@@ -321,7 +321,7 @@ float ESUTIL_API TimeSinceStartup();
 
 void ESUTIL_API BeginProfile(const std::string& tag);
 void ESUTIL_API EndProfile();
-
+void ESUTIL_API ESSleep(float sec);
 std::string ESUTIL_API readFileData(const std::string& filename);
 //
 //// \brief Return an identity matrix
