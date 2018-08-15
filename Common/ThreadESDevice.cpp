@@ -427,6 +427,8 @@ namespace RenderEngine {
 		esLogMessage("[render] __RunCommand()");
 		_threaded = true;
 		_realDevice->AcqiureThreadOwnerShip();
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
 		Signal();
 		while (!_quit) {
 			//usleep(10);

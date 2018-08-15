@@ -44,7 +44,7 @@ std::vector<Mesh::Ptr> Mesh::LoadMeshFromFile(const std::string & file)
 		{
 			float x = verticesArray[index * verticesStep].GetFloat();
 			float y = verticesArray[index * verticesStep + 1].GetFloat();
-			float z = verticesArray[index * verticesStep + 2].GetFloat();
+			float z = -verticesArray[index * verticesStep + 2].GetFloat();
 			mesh->vertices[index] = glm::vec3(x, y, z);
 			if (uvCount > 0)
 			{

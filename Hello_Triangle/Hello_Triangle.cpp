@@ -61,13 +61,13 @@ Camera::Ptr camera; //= Camera::Ptr(new Camera);
 //
 const std::string vShaderStr =
 "#version 300 es                          \n"
-"layout(location = 0) in vec4 vPosition;  \n"
+"layout(location = 0) in vec3 vPosition;  \n"
 "layout(location = 1) in vec2 a_texCoord; \n"
 "out vec2 v_texCoord;                     \n"
 "	uniform mat4 MVP;                     \n"
 "void main()                              \n"
 "{                                        \n"
-"   gl_Position = MVP*vPosition;		  \n"
+"   gl_Position = MVP*vec4(vPosition,1);		  \n"
 "   v_texCoord = a_texCoord;              \n"
 "}                                        \n";
 
@@ -115,10 +115,11 @@ void Draw ( ESContext *esContext )
 	//BeginProfile("g_device->BeginRender()");
 	g_device->BeginRender();
 	//EndProfile();
-	g_device->SetViewPort(0, 0, esContext->width, esContext->height);
+	//g_device->SetViewPort(0, 0, esContext->width, esContext->height);
     
     // Clear the color buffer
-	g_device->Clear();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//g_device->Clear();
 	g_device->UseTexture2D(g_texture);
 	g_device->UseGPUProgram(g_program);
     //g_device->DrawTriangle(vVertices);
@@ -161,9 +162,9 @@ void Update(ESContext* esContext,float dt)
 	g_fps = newFPs;
 	for (auto mesh : meshes)
 	{
-		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y + dt*0.5f, mesh->rotation.z);
+		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y +dt*0.2f, mesh->rotation.z);
 	}
-	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f", avgFps, newFPs, delta);
+	//esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
 	ESSleep(0.02f);
 }
 void OnLostFocus()
@@ -185,26 +186,38 @@ void InitApp()
 		return;
 	}
 	inited = true;
-	//mesh = Mesh::Ptr(new Mesh("Cube", 8, 36));
+	
 	meshes = Mesh::LoadMeshFromFile("monkey.babylon");
-
+	auto m = meshes[0];
+	for (int i = 0; i < m->vertices.size(); ++i)
+	{
+		printf("%1f,%1f,%1f, %1f, %1f\n", m->vertices[i].x,m->vertices[i].y,m->vertices[i].z,m->uvs[i].x,m->uvs[i].y);
+	}
 	camera = Camera::Ptr(new Camera);
-	//    mesh->vertices[0] = vec3(-1, 1, 1);
-	//    mesh->vertices[1] = vec3(1, 1, 1);
-	//    mesh->vertices[2] = vec3(1, -1, 1);
-	//    mesh->vertices[3] = vec3(-1, -1, 1);
-	//    mesh->vertices[4] = vec3(-1, 1, -1);
-	//    mesh->vertices[5] = vec3(1, 1, -1);
-	//    mesh->vertices[6] = vec3(1, -1, -1);
-	//    mesh->vertices[7] = vec3(-1, -1, -1   
 	camera->position = vec3(0, 0, 5.0f);
 	camera->target = vec3(0, 0, 0);
-	//    mesh->indices = {
-	// 	   0,1,2,0,2,3,0,4,7,0,7,3,4,5,7,4,6,7,
-	// 	   0,4,5,0,5,1,5,6,2,5,2,1,6,2,3,6,3,7
-	//    };
+ 	//auto mesh = Mesh::Ptr(new Mesh("Cube", 8, 6));
+ 	//    mesh->vertices[0] = vec3(-1, 1, 1);
+ 	//    mesh->vertices[1] = vec3(1, 1, 1);
+ 	//    mesh->vertices[2] = vec3(1, -1, 1);
+ 	//    mesh->vertices[3] = vec3(-1, -1, 1);
+	 //   mesh->vertices[4] = vec3(-1, 1, -1);
+	 //   mesh->vertices[5] = vec3(1, 1, -1);
+	 //   mesh->vertices[6] = vec3(1, -1, -1);
+		//mesh->vertices[7] = vec3(-1, -1, -1);
+		//mesh->uvs = {
+		//	vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,1),
+		//	vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,1)
+		//};
+		////mesh->indices = { 0,1,2,0,2,3 };
+ 	//	mesh->indices = {
+ 	//	   0,1,2,0,2,3,0,4,7,0,7,3,4,5,7,4,6,7,
+ 	//	   0,4,5,0,5,1,5,6,2,5,2,1,6,2,3,6,3,7
+ 	//	};
+		//meshes.clear();
+		//meshes.push_back(mesh);
 }
-bool _multiThread = true;
+bool _multiThread = false;
 int esMain ( ESContext *esContext )
 {
 	esLogMessage("esMain ( ESContext *esContext )");
@@ -221,10 +234,13 @@ int esMain ( ESContext *esContext )
 		g_device = new ESDeviceImp(esContext);
 	}
 #endif
-	g_device->CreateWindow1 ( "Hello Triangle", 480, 320, ES_WINDOW_RGB );
+	g_device->CreateWindow1 ( "Hello Triangle", 480, 320, ES_WINDOW_RGB | ES_WINDOW_DEPTH | ES_WINDOW_ALPHA );
 	if (!_multiThread)
 	{
 		g_device->AcqiureThreadOwnerShip();
+		glEnable(GL_DEPTH_TEST);
+		// Accept fragment if it closer to the camera than the former one
+		glDepthFunc(GL_LESS);
 	}
 	else
 	{
