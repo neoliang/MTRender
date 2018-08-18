@@ -4,7 +4,8 @@ set ( common_src Source/esShader.cpp
                  Source/esUtil.cpp
 				 ESDevice.cpp
 				 ThreadESDevice.cpp
-				 Mesh.cpp)
+				 Mesh.cpp
+				 Source/DemoBase.cpp)
 
 
 # Win32 Platform files
