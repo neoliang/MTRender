@@ -5,13 +5,13 @@
 
 class DemoBase
 {
-	RenderEngine::ESDevice* g_device;
-	RenderEngine::GPUProgram* g_program;
-	RenderEngine::Texture2D* g_texture;
+	RenderEngine::ESDevice* _device;
+	RenderEngine::GPUProgram* _program;
+	RenderEngine::Texture2D* _texture;
 	///
 	// Draw a triangle using the shader pair created in Init()
-	std::vector<RenderEngine::Mesh::Ptr> meshes; //= Mesh::Ptr(new Mesh("Cube", 8, 36));
-	RenderEngine::Camera::Ptr camera; //= Camera::Ptr(new Camera);
+	std::vector<RenderEngine::Mesh::Ptr> _meshes; //= Mesh::Ptr(new Mesh("Cube", 8, 36));
+	RenderEngine::Camera::Ptr _camera; //= Camera::Ptr(new Camera);
 
 	bool _multiThreaded;
 	bool _returnResImmediately;

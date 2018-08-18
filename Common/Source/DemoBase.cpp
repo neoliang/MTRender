@@ -15,13 +15,13 @@ const float M_PI = 3.1415926f;
 
 const std::string vShaderStr =
 "#version 300 es                          \n"
-"layout(location = 0) in vec3 vPosition;  \n"
+"layout(location = 0) in vec4 vPosition;  \n"
 "layout(location = 1) in vec2 a_texCoord; \n"
 "out vec2 v_texCoord;                     \n"
 "	uniform mat4 MVP;                     \n"
 "void main()                              \n"
 "{                                        \n"
-"   gl_Position = MVP*vec4(vPosition,1);		  \n"
+"   gl_Position = MVP * vPosition;		  \n"
 "   v_texCoord = a_texCoord;              \n"
 "}                                        \n";
 
@@ -59,15 +59,17 @@ DemoBase* DemoBase::Instnce()
 
 void DemoBase::Init()
 {
-	meshes = Mesh::LoadMeshFromFile("monkey.babylon");
-	auto m = meshes[0];
-	for (int i = 0; i < m->vertices.size(); ++i)
+	_meshes = Mesh::LoadMeshFromFile("monkey.babylon");
+	auto tM = _meshes[0];
+	for (int i = 0; i < 40; ++i)
 	{
-		printf("%1f,%1f,%1f, %1f, %1f\n", m->vertices[i].x, m->vertices[i].y, m->vertices[i].z, m->uvs[i].x, m->uvs[i].y);
+		auto m = std::make_shared<Mesh>("cube", tM->vertices.size(), tM->indices.size());
+		m->position = glm::vec3((rand() % 10)-5, (rand() % 10)-5, (rand() % 10) - 5);
+		_meshes.push_back(m);
 	}
-	camera = Camera::Ptr(new Camera);
-	camera->position = vec3(0, 0, 5.0f);
-	camera->target = vec3(0, 0, 0);
+	_camera = Camera::Ptr(new Camera);
+	_camera->position = vec3(0, 0, 12.0f);
+	_camera->target = vec3(0, 0, 0);
 }
 
 void DemoBase::OnCreateDevice(ESContext *esContext)
@@ -77,17 +79,17 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 #else
 	if (_multiThreaded)
 	{
-		g_device = new ThreadESDevice(esContext, _returnResImmediately);
+		_device = new ThreadESDevice(esContext, _returnResImmediately);
 	}
 	else
 	{
-		g_device = new ESDeviceImp(esContext);
+		_device = new ESDeviceImp(esContext);
 	}
 #endif
-	g_device->CreateWindow1("Hello Triangle", 480, 320, ES_WINDOW_RGB | ES_WINDOW_DEPTH | ES_WINDOW_ALPHA);
+	_device->CreateWindow1("Hello Triangle", 480, 320, ES_WINDOW_RGB | ES_WINDOW_DEPTH | ES_WINDOW_ALPHA);
 	if (!_multiThreaded)
 	{
-		g_device->AcqiureThreadOwnerShip();
+		_device->AcqiureThreadOwnerShip();
 		glEnable(GL_DEPTH_TEST);
 		// Accept fragment if it closer to the camera than the former one
 		glDepthFunc(GL_LESS);
@@ -95,33 +97,33 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 	else
 	{
 #ifndef __APPLE__
-		((ThreadESDevice*)g_device)->Run();
+		((ThreadESDevice*)_device)->Run();
 #endif
 	}
-	g_device->SetClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+	_device->SetClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	int width,
 		height;
 
 	char *buffer = esLoadTGA(esContext->platformData, "basemap.tga", &width, &height);
-	g_texture = g_device->CreateTexture2D(width, height, buffer);
-	g_program = g_device->CreateGPUProgram(vShaderStr, fShaderStr);
-	for (auto mesh : meshes)
+	_texture = _device->CreateTexture2D(width, height, buffer);
+	_program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
+	for (auto mesh : _meshes)
 	{
-		mesh->vbo = g_device->CreateVBO(mesh->vertices, mesh->uvs, mesh->indices);
+		mesh->vbo = _device->CreateVBO(_meshes[0]->vertices, _meshes[0]->uvs, _meshes[0]->indices);
 	}
 }
 
 void DemoBase::OnDestroyDevice()
 {
-	g_device->DeletGPUProgram(g_program);
-	g_device->DeleteTexture2D(g_texture);
-	for (auto mesh : meshes)
+	_device->DeletGPUProgram(_program);
+	_device->DeleteTexture2D(_texture);
+	for (auto mesh : _meshes)
 	{
-		g_device->DeleteVBO(mesh->vbo);
+		_device->DeleteVBO(mesh->vbo);
 	}
-	g_device->Cleanup();
-	delete g_device;
-	g_device = nullptr;
+	_device->Cleanup();
+	delete _device;
+	_device = nullptr;
 }
 
 static double g_accTime = 0;
@@ -137,7 +139,7 @@ void DemoBase::Update(float dt)
 	float newFPs = 1.0f / dt;
 	float delta = newFPs - g_fps;
 	g_fps = newFPs;
-	for (auto mesh : meshes)
+	for (auto mesh : _meshes)
 	{
 		mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
 	}
@@ -148,20 +150,20 @@ void DemoBase::Update(float dt)
 void DemoBase::Render()
 {
 	//BeginProfile("g_device->BeginRender()");
-	g_device->BeginRender();
+	_device->BeginRender();
 	//EndProfile();
 	//g_device->SetViewPort(0, 0, esContext->width, esContext->height);
 
-	g_device->Clear();
-	g_device->UseTexture2D(g_texture);
-	auto program = g_device->CreateGPUProgram(vShaderStr, fShaderStr);
-	g_device->UseGPUProgram(program);
-	g_device->DeletGPUProgram(program);
-	for (int i = 0; i < 40; ++i)
+	_device->Clear();
+	_device->UseTexture2D(_texture);
+	auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
+	_device->UseGPUProgram(program);
+	_device->DeletGPUProgram(program);
+	//for (int i = 0; i < 40; ++i)
 	{
-		g_device->Render(camera, meshes);
+		_device->Render(_camera, _meshes);
 	}
-	g_device->Present();
+	_device->Present();
 }
 
 

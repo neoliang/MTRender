@@ -58,6 +58,7 @@ namespace RenderEngine {
 	}
 	void ESDeviceImp::Clear()
 	{
+		glClearDepthf(1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 	void ESDeviceImp::SetViewPort(int x, int y, int width, int height)
