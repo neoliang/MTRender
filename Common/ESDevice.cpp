@@ -20,7 +20,7 @@ namespace RenderEngine {
 		GPUProgramImp(GLuint id)
 			:ProgramID(id) {
 			textLoc = glGetUniformLocation(ProgramID, "baseTex");
-			esLogMessage("textLoc %d",(int)textLoc);
+			//esLogMessage("textLoc %d",(int)textLoc);
 		}
 		GPUProgram* GetRealGUPProgram()
 		{
@@ -29,7 +29,7 @@ namespace RenderEngine {
 	};
 	GPUProgram::~GPUProgram()
 	{
-		esLogMessage("[render]~GPUProgram()");
+		//esLogMessage("[render]~GPUProgram()");
 	}
 
 

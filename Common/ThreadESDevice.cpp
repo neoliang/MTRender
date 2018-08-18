@@ -501,7 +501,6 @@ namespace RenderEngine {
 	}
 	GPUProgram* ThreadESDevice::CreateGPUProgram(const std::string &vertexShaderStr, const std::string &fragmentShaderStr)
 	{
-		esLogMessage("[render] CreateGPUProgram %d", (int)_threaded);
 		ThreadedGPUProgram* program = new ThreadedGPUProgram();
 		if (!_threaded)
 		{

@@ -87,7 +87,7 @@ int Init (ESContext* esContext )
 	int width,
 		height;
 
-	char *buffer = esLoadTGA(esContext->platformData, "Suzanne.tga", &width, &height);
+	char *buffer = esLoadTGA(esContext->platformData, "basemap.tga", &width, &height);
 	g_texture = g_device->CreateTexture2D(width, height, buffer);
 	g_program = g_device->CreateGPUProgram(vShaderStr, fShaderStr);
 	for (auto mesh : meshes)
@@ -118,10 +118,12 @@ void Draw ( ESContext *esContext )
 	//g_device->SetViewPort(0, 0, esContext->width, esContext->height);
     
     // Clear the color buffer
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//g_device->Clear();
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	g_device->Clear();
 	g_device->UseTexture2D(g_texture);
-	g_device->UseGPUProgram(g_program);
+	auto program = g_device->CreateGPUProgram(vShaderStr, fShaderStr);
+	g_device->UseGPUProgram(program);
+	g_device->DeletGPUProgram(program);
     //g_device->DrawTriangle(vVertices);
     //g_device->DrawTriangle(vVertices1, sizeof(vVertices1)/sizeof(GLfloat));
 	//BeginProfile("g_device->Render(camera, meshes);");
@@ -164,7 +166,7 @@ void Update(ESContext* esContext,float dt)
 	{
 		mesh->rotation = vec3(mesh->rotation.x + dt*0.5f, mesh->rotation.y +dt*0.2f, mesh->rotation.z);
 	}
-	//esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
+	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
 	ESSleep(0.02f);
 }
 void OnLostFocus()
@@ -227,7 +229,7 @@ int esMain ( ESContext *esContext )
 #else
 	if (_multiThread)
 	{
-		g_device = new ThreadESDevice(esContext,true);
+		g_device = new ThreadESDevice(esContext,false);
 	}
 	else
 	{
