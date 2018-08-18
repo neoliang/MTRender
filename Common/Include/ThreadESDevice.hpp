@@ -69,18 +69,30 @@ namespace RenderEngine {
 
 	class ThreadESDevice : public ESDevice
 	{
+	public:
+		enum WaitType
+		{
+			WaitType_Common,
+			WaitType_OnwerShip,
+			WaitType_Present,
+			WaitType_CreateShader,
+			WaitType_CreateVBO,
+			WaitType_CreateTexture,
+
+			WaitType_Max
+		};
+	private:
 		ESDevice* _realDevice;
 		LockFreeQueue<ThreadDeviceCommand*> _commandQueue;
 		std::mutex _mutex;
 		std::thread _thread;
 		bool _quit;
-		Semaphore _waitSem;
-		Semaphore _presentSem;
-		Semaphore _ownerShipSem;
+		Semaphore _waitSem[WaitType_Max];
 		bool  _threaded;
 		bool _isInPresenting;
+		bool _returnResImmediately;	//是否立即返回资源创建
 	public:
-		ThreadESDevice(ESContext* context);
+		ThreadESDevice(ESContext* context,bool returnResImmediately);
 		~ThreadESDevice();
 		virtual void Cleanup();
 		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags);
@@ -104,29 +116,33 @@ namespace RenderEngine {
 			std::vector<unsigned short> indices);
 		virtual void DeleteVBO(VBO* vbo);
 		virtual void DrawVBO(VBO* vbo);
-		void WaitForSignal() {
-			_waitSem.WaitForSignal();
-
+	public:
+		bool IsCreateResInBlockMode()const
+		{
+			return _returnResImmediately;
 		}
-		void Signal() {
-			_waitSem.Signal();
+		void WaitForSignal(WaitType waitType = WaitType_Common) {
+			_waitSem[waitType].WaitForSignal();
+		}
+		void Signal(WaitType waitType = WaitType_Common) {
+			_waitSem[waitType].Signal();
 		}
 		void WaitForPresent()
 		{
-			_presentSem.WaitForSignal();
+			WaitForSignal(WaitType_Present);
 		}
 		void SignalPresent()
 		{
-			_presentSem.Signal();
+			Signal(WaitType_Present);
 			_isInPresenting = false;
 		}
 		void WaitForOwnerShip()
 		{
-			_ownerShipSem.WaitForSignal();
+			WaitForSignal(WaitType_OnwerShip);
 		}
 		void SignalOnwerShip()
 		{
-			_ownerShipSem.Signal();
+			Signal(WaitType_OnwerShip);
 		}
 	private:
 		static void* _Run(void* self);

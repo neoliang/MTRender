@@ -23,6 +23,8 @@ namespace RenderEngine {
 		friend class ESDeviceImp;
 	protected:
 		virtual ~GPUProgram();
+	public:
+		virtual GPUProgram* GetRealGUPProgram() = 0;
 	};
 
 	class Texture2D
@@ -30,6 +32,8 @@ namespace RenderEngine {
 		friend class ESDeviceImp;
 	protected:
 		virtual ~Texture2D();
+	public:
+		virtual Texture2D* GetRealTexture2D() = 0;
 	};
 
 	class ESDevice {

@@ -217,7 +217,7 @@ void InitApp()
 		//meshes.clear();
 		//meshes.push_back(mesh);
 }
-bool _multiThread = false;
+bool _multiThread = true;
 int esMain ( ESContext *esContext )
 {
 	esLogMessage("esMain ( ESContext *esContext )");
@@ -227,7 +227,7 @@ int esMain ( ESContext *esContext )
 #else
 	if (_multiThread)
 	{
-		g_device = new ThreadESDevice(esContext);
+		g_device = new ThreadESDevice(esContext,true);
 	}
 	else
 	{

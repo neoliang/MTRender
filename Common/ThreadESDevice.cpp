@@ -34,6 +34,10 @@ namespace RenderEngine {
 	public:
 		GPUProgram * realProgram;
 		ThreadedGPUProgram() :realProgram(NULL) {}
+		GPUProgram* GetRealGUPProgram()
+		{
+			return realProgram;
+		}
 	protected:
 		~ThreadedGPUProgram() {}
 	};
@@ -46,6 +50,10 @@ namespace RenderEngine {
 	public:
 		Texture2D * realTexture;
 		ThreadedTexture2D():realTexture(NULL){}
+		Texture2D* GetRealTexture2D()
+		{
+			return realTexture;
+		}
 	protected:
 		~ThreadedTexture2D() {}
 	};
@@ -182,6 +190,13 @@ namespace RenderEngine {
 		{
 			_vbo->realVbo = device->CreateVBO(_vertices, _uvs, _indices);
 		}
+		void OnExecuteEnd(ThreadESDevice* threadDevice)
+		{
+			if (threadDevice->IsCreateResInBlockMode())
+			{
+				threadDevice->Signal(ThreadESDevice::WaitType_CreateVBO);
+			}
+		}
 	};
 	class UseTexture2DCMD : public ThreadDeviceCommand
 	{
@@ -223,6 +238,13 @@ namespace RenderEngine {
 		void Execute(ESDevice* device)
 		{
 			_texture->realTexture = device->CreateTexture2D(_width, _height, _data);
+		}
+		void OnExecuteEnd(ThreadESDevice* threadDevice)
+		{
+			if (threadDevice->IsCreateResInBlockMode())
+			{
+				threadDevice->Signal(ThreadESDevice::WaitType_CreateTexture);
+			}
 		}
 	};
 
@@ -268,7 +290,13 @@ namespace RenderEngine {
 		{
 			_program->realProgram = device->CreateGPUProgram(_vsrc, _fsrc);
 		}
-		void OnExecuteEnd(ThreadESDevice* threadDevice);
+		void OnExecuteEnd(ThreadESDevice* threadDevice)
+		{
+			if (threadDevice->IsCreateResInBlockMode())
+			{
+				threadDevice->Signal(ThreadESDevice::WaitType_CreateShader);
+			}
+		}
 	};
 	class AcquireOwnerShipCMD : public ThreadDeviceCommand
 	{
@@ -287,11 +315,6 @@ namespace RenderEngine {
 		}
 		void OnExecuteEnd(ThreadESDevice* threadDevice);
 	};
-
-	void CreateGPUProgramCMD::OnExecuteEnd(ThreadESDevice* threadDevice)
-	{
-		threadDevice->Signal();
-	}
 	void AcquireOwnerShipCMD::OnExecuteEnd(ThreadESDevice * threadDevice)
 	{
 		threadDevice->SignalOnwerShip();
@@ -347,13 +370,14 @@ namespace RenderEngine {
 		AUTOLOCK
 			_commandQueue.push(new DrawTriangleCMD(vertices));
 	}
-	ThreadESDevice::ThreadESDevice(ESContext* context)
+	ThreadESDevice::ThreadESDevice(ESContext* context, bool returnResImmediately)
+		:_returnResImmediately(returnResImmediately)
+		, _threaded(false)
+		,_quit(false)
+		,_isInPresenting(false)
 	{
 		esLogMessage("[render] ThreadESDevice");
 		_realDevice = new ESDeviceImp(context);
-		_threaded = false;
-		_quit = false;
-		_isInPresenting = false;
 	}
 	ThreadESDevice::~ThreadESDevice()
 	{
@@ -490,6 +514,10 @@ namespace RenderEngine {
 				AUTOLOCK
 					_commandQueue.push(cmd);
 			}
+			if (_returnResImmediately)
+			{
+				WaitForSignal(WaitType_CreateShader);
+			}
 		}
 		return program;
 	}
@@ -505,6 +533,10 @@ namespace RenderEngine {
 			CreateVBOCMD* cmd = new CreateVBOCMD(vertices,uvs,indices,vbo);
 			AUTOLOCK
 			_commandQueue.push(cmd);
+			if (_returnResImmediately)
+			{
+				this->WaitForSignal(WaitType_CreateVBO);
+			}
 		}
 		return vbo;
 	}
@@ -549,6 +581,10 @@ namespace RenderEngine {
 			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(width, height, data, texture);
 			AUTOLOCK
 				_commandQueue.push(cmd);
+			if (_returnResImmediately)
+			{
+				WaitForSignal(WaitType_CreateTexture);
+			}
 				
 		}
 		return texture;

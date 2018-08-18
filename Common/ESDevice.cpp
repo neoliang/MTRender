@@ -22,6 +22,10 @@ namespace RenderEngine {
 			textLoc = glGetUniformLocation(ProgramID, "baseTex");
 			esLogMessage("textLoc %d",(int)textLoc);
 		}
+		GPUProgram* GetRealGUPProgram()
+		{
+			return this;
+		}
 	};
 	GPUProgram::~GPUProgram()
 	{
@@ -35,6 +39,11 @@ namespace RenderEngine {
 		GLuint textureID;
 		Texture2DImp(GLuint id)
 			:textureID(id) {}
+
+		Texture2D* GetRealTexture2D()
+		{
+			return this;
+		}
 	};
 
 	Texture2D::~Texture2D()
