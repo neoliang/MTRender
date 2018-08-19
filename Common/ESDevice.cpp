@@ -234,7 +234,7 @@ namespace RenderEngine {
 		const glm::vec3 up(0, 1, 0);
 		auto viewMat = glm::lookAt(camer->position, camer->target, up);
 		GLuint MatrixID = glGetUniformLocation(_programId, "MVP");
-		glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_esContext->width / _esContext->height, 0.1f, 100.0f);
+		glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_esContext->width / _esContext->height, 0.1f, 20.0f);
 		for (auto mesh : meshes)
 		{
 			auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);

@@ -6,6 +6,8 @@
 #include <thread>
 #include <iostream>
 #include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/euler_angles.hpp"
 using namespace std;
 using namespace RenderEngine;
 using namespace  glm;
@@ -64,7 +66,7 @@ void DemoBase::Init()
 	for (int i = 0; i < 40; ++i)
 	{
 		auto m = std::make_shared<Mesh>("cube", tM->vertices.size(), tM->indices.size());
-		m->position = glm::vec3((rand() % 10)-5, (rand() % 10)-5, (rand() % 10) - 5);
+		m->position = glm::vec3((rand() % 1000)/100.0f-5, (rand() % 1000)/100.0f-5, (rand() % 1000)/100.0f - 5);
 		_meshes.push_back(m);
 	}
 	_camera = Camera::Ptr(new Camera);
@@ -100,7 +102,7 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 		((ThreadESDevice*)_device)->Run();
 #endif
 	}
-	_device->SetClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+	_device->SetClearColor(0.0f, 0.0f, 0.6f, 0.0f);
 	int width,
 		height;
 
@@ -129,13 +131,24 @@ void DemoBase::OnDestroyDevice()
 static double g_accTime = 0;
 static unsigned g_accCount = 0;
 static float g_fps = 0.0f;
+glm::mat4 g_mat;
+void SimulateBusy()
+{
+	auto w0 = glm::translate(glm::mat4(1.0f), vec3(1.0,5.0,20));
+	auto w1 = glm::eulerAngleXYZ(0.7f,0.8f,0.9f);
+	for (int i = 0; i < 5000; ++i)
+	{
+		g_mat = w0*w1;
+	}
+}
 void DemoBase::Update(float dt)
 {
+	BeginProfile("SimulateBusy");
+	SimulateBusy();
+	EndProfile();
 	++g_accCount;
 	g_accTime += dt;
 	float avgFps = 1.0f / (g_accTime / g_accCount);
-
-
 	float newFPs = 1.0f / dt;
 	float delta = newFPs - g_fps;
 	g_fps = newFPs;
@@ -144,19 +157,27 @@ void DemoBase::Update(float dt)
 		mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
 	}
 	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
-	ESSleep(0.02f);
 }
+
+
+
+static double s_createShaderAccTime = 0;
+static unsigned int s_createShaderAccCount = 0;
 
 void DemoBase::Render()
 {
-	//BeginProfile("g_device->BeginRender()");
 	_device->BeginRender();
-	//EndProfile();
-	//g_device->SetViewPort(0, 0, esContext->width, esContext->height);
 
 	_device->Clear();
 	_device->UseTexture2D(_texture);
+	//BeginProfile("device.CreateGPUProgram");
+	float createShaderTime = TimeSinceStartup();
 	auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
+	createShaderTime = TimeSinceStartup() - createShaderTime;
+	++s_createShaderAccCount;
+	s_createShaderAccTime += createShaderTime;
+	float avgTime = s_createShaderAccTime / s_createShaderAccCount;
+	esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
 	_device->UseGPUProgram(program);
 	_device->DeletGPUProgram(program);
 	//for (int i = 0; i < 40; ++i)

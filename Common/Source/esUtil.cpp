@@ -188,7 +188,7 @@ GLboolean ESUTIL_API esCreateWindow ( ESContext *esContext, const char *title, G
          EGL_GREEN_SIZE,     6,
          EGL_BLUE_SIZE,      5,
          EGL_ALPHA_SIZE,     ( flags & ES_WINDOW_ALPHA ) ? 8 : EGL_DONT_CARE,
-         EGL_DEPTH_SIZE,     ( flags & ES_WINDOW_DEPTH ) ? 8 : EGL_DONT_CARE,
+         EGL_DEPTH_SIZE,     ( flags & ES_WINDOW_DEPTH ) ? 24 : EGL_DONT_CARE,
          EGL_STENCIL_SIZE,   ( flags & ES_WINDOW_STENCIL ) ? 8 : EGL_DONT_CARE,
          EGL_SAMPLE_BUFFERS, ( flags & ES_WINDOW_MULTISAMPLE ) ? 1 : 0,
          // if EGL_KHR_create_context extension is supported, then we will use
@@ -459,5 +459,5 @@ void ESUTIL_API BeginProfile(const std::string& tag)
 void ESUTIL_API EndProfile()
 {
 	float pastTime = TimeSinceStartup() - s_time;
-	esLogMessage("profile: %s cost :%f", s_tag.c_str(), pastTime);
+	esLogMessage("profile: %s cost :%f\n", s_tag.c_str(), pastTime);
 }
