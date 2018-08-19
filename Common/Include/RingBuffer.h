@@ -4,23 +4,11 @@
 #include "PlatformSemaphore.h"
 #include <vector>
 
-#if defined(__GNUC__) || defined(__SNC__)
-#define ALIGN_OF(T) __alignof__(T)
-#define ALIGN_TYPE(val) __attribute__((aligned(val)))
-#define FORCE_INLINE inline __attribute__ ((always_inline))
-#elif defined(_MSC_VER)
-#define ALIGN_OF(T) __alignof(T)
-#define ALIGN_TYPE(val) __declspec(align(val))
-#define FORCE_INLINE __forceinline
-#else
-#define ALIGN_TYPE(size)
-#define FORCE_INLINE inline
-#endif
 
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 class RingBuffer
 {
-	const static int MAX_SIZE = 1024 * 1024;
+	const static int MAX_SIZE = 1024;
 	char _bufer[MAX_SIZE];
 	unsigned long long _in;
 	unsigned long long _out;
@@ -29,53 +17,64 @@ class RingBuffer
 	std::vector<char> _tempbufer;
 
 private:
-	void ReadDataPointer(char* data, unsigned int size)
+	void ReadDataPointer(char* data, unsigned int size, unsigned int alignment)
 	{
-		if (size <= _in - _out)
+		unsigned int StepSize = Align(size, alignment);
+		if (StepSize <= _in - _out)
 		{
 			unsigned int l = min(size, MAX_SIZE - (_out & (MAX_SIZE - 1)));
 			//barrier
 			memcpy(data, _bufer + (_out & (MAX_SIZE - 1)), l);
 			memcpy(data + l, _bufer, size - l);
 			//barrier
-			_out += size;
+			_out += StepSize;
 			_writeSem.Signal();
 		}
 		else
 		{
 			unsigned int readSize = size - (_in - _out);
-			while (readSize > _in - _out)
+			unsigned int readStepSize = Align(readSize, alignment);
+			while (readStepSize > _in - _out)
 			{
 				_readSem.WaitForSignal();
 			}
-			ReadDataPointer(data, readSize);
-			ReadDataPointer(data + readSize, size - readSize);
+			ReadDataPointer(data, readSize,alignment);
+			if (size - readSize > 0)
+			{
+				ReadDataPointer(data + readSize, size - readSize, alignment);
+			}
 		}
 	}
-	void WriteDataPointer(const char* data, unsigned int size)
+	void WriteDataPointer(const char* data, unsigned int size, unsigned int alignment)
 	{
-		if (size <= MAX_SIZE - _in + _out)
+		unsigned int StepSize = Align(size, alignment);
+		if (StepSize <= MAX_SIZE - _in + _out)
 		{
 			unsigned int l = min(size, MAX_SIZE - (_in  & (MAX_SIZE - 1)));
 			//barrier
 			memcpy(_bufer + (_in & (MAX_SIZE - 1)), data, l);
 			memcpy(_bufer, (data + l), size - l);
 			//barrier
-			_in = _in + size;
+			_in = _in + StepSize;
 			_readSem.Signal();
 		}
 		else
 		{
 			unsigned int writeSize = size - (MAX_SIZE - _in + _out);
+			unsigned int writeStepSize = Align(writeSize, alignment);
 			while (writeSize > MAX_SIZE - _in + _out)
 			{
 				_writeSem.WaitForSignal();
 			}
-			WriteDataPointer(data, writeSize);			
-			WriteDataPointer(data + writeSize, size - writeSize);
+			WriteDataPointer(data, writeSize,alignment);
+			if (size - writeSize > 0)
+			{
+				WriteDataPointer(data + writeSize, size - writeSize, alignment);
+			}
 		}
 	}
-	size_t Align(size_t pos, size_t alignment) const { return (pos + alignment - 1)&~(alignment - 1); }
+public:
+	static unsigned int Align(unsigned int pos, unsigned int alignment)  { return (pos + alignment - 1)&~(alignment - 1); }
 public:
 	RingBuffer()
 		:_in(0), _out(0)
@@ -83,24 +82,26 @@ public:
 		_tempbufer.reserve(1024);
 	}
 public:
-	template<class T>  void Write(const T& v)
-	{
-		auto size = Align(sizeof(T), ALIGN_OF(T));
-		WriteDataPointer((const char*)&v,size);
-	}
-	template<class T>  const T& Read()
-	{
-		auto size = Align(sizeof(T), ALIGN_OF(T));
-		_tempbufer.resize(size);
-		ReadDataPointer((char*)&_tempbufer[0],size);
-		return *reinterpret_cast<const T*>(&_tempbufer[0]);
-	}
 
 	enum
 	{
 		kDefaultAlignment = 4,
-		kDefaultStep = 4096
+		kDefaultStep = 512
 	};
+
+	template<class T>  void Write(const T& v)
+	{
+		auto size = sizeof(T);
+		WriteDataPointer((const char*)&v,size, kDefaultAlignment);
+	}
+	template<class T>  const T& Read()
+	{
+		auto size = sizeof(T);
+		_tempbufer.resize(size);
+		ReadDataPointer((char*)&_tempbufer[0],size, kDefaultAlignment);
+		return *reinterpret_cast<const T*>(&_tempbufer[0]);
+	}
+
 
 	void ReadStreamingData(void* data, unsigned int size, unsigned int alignment = kDefaultAlignment, unsigned int step = kDefaultStep)
 	{
@@ -108,7 +109,7 @@ public:
 		for (unsigned int offset = 0; offset < size; offset += step)
 		{
 			unsigned int bytes = min(size - offset, step);
-			ReadDataPointer(dest, Align(bytes, alignment));
+			ReadDataPointer(dest, bytes, alignment);
 			dest += step;
 		}
 	}
@@ -118,7 +119,7 @@ public:
 		for (unsigned int offset = 0; offset < size; offset += step)
 		{
 			unsigned int bytes = min(size - offset, step);
-			WriteDataPointer(src, Align(bytes, alignment));
+			WriteDataPointer(src, bytes, alignment);
 			src += step;
 		}
 	}

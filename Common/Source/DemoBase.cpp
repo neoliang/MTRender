@@ -62,21 +62,36 @@ DemoBase* DemoBase::Instnce()
 void DemoBase::Init()
 {
 	//≤‚ ‘ringbuffer
+	auto fileContent = readFileData("monkey.babylon");
 	RingBuffer* buffer = new RingBuffer();
 	std::thread s1 = std::thread([&]() {
 		for (int i = 0; i < 1000; ++i)
 		{
-			auto v = buffer->Read<int>();
+			auto v = buffer->Read<char>();
 			if (i == 999)
 			{
 				esLogMessage("ringbuffer v %d", v);
 			}
 		}
+		char* buff = new char[fileContent.size()+1];
+		
+		buffer->ReadStreamingData(buff, fileContent.size());
+		buff[fileContent.size()] = '\0';
+		std::string newString(buff);
+		if (newString == fileContent)
+		{
+			esLogMessage("readstreaming data equal");
+		}
+		else
+		{
+			esLogMessage("readstreaming data not equal");
+		}
 	});
 	for (int i = 0; i < 1000; ++i)
 	{
-		buffer->Write<int>(i);
+		buffer->Write<char>((char)i);
 	}
+	buffer->WriteStreamingData(fileContent.c_str(), fileContent.size());
 	s1.join();
 	delete buffer;
 
