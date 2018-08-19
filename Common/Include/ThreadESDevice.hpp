@@ -36,12 +36,11 @@ namespace RenderEngine {
 		void push(T v)
 		{
 			int next = (_in + 1) % MAX_SIZE;
-			while (next == _out)
+			if (next == _out)
 			{
 				_writeSem.WaitForSignal();
-				next = (_in + 1) % MAX_SIZE;
+				push(v);
 			}
-
 			_arr[_in] = v;
 			_in = next;
 			_readSem.Signal();

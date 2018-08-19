@@ -172,14 +172,14 @@ void DemoBase::Render()
 	_device->UseTexture2D(_texture);
 	//BeginProfile("device.CreateGPUProgram");
 	float createShaderTime = TimeSinceStartup();
-	auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
+	//auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
 	createShaderTime = TimeSinceStartup() - createShaderTime;
 	++s_createShaderAccCount;
 	s_createShaderAccTime += createShaderTime;
 	float avgTime = s_createShaderAccTime / s_createShaderAccCount;
-	esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
-	_device->UseGPUProgram(program);
-	_device->DeletGPUProgram(program);
+	//esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
+	_device->UseGPUProgram(_program);
+	//_device->DeletGPUProgram(program);
 	//for (int i = 0; i < 40; ++i)
 	{
 		_device->Render(_camera, _meshes);

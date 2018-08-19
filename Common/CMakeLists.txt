@@ -5,7 +5,8 @@ set ( common_src Source/esShader.cpp
 				 ESDevice.cpp
 				 ThreadESDevice.cpp
 				 Mesh.cpp
-				 Source/DemoBase.cpp)
+				 Source/DemoBase.cpp
+				 Source/RingBuffer.cpp)
 
 
 # Win32 Platform files
