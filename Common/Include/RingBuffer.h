@@ -29,7 +29,7 @@ class RingBuffer
 	std::vector<char> _tempbufer;
 
 private:
-	FORCE_INLINE void ReadDataPointer(char* data, unsigned int size)
+	void ReadDataPointer(char* data, unsigned int size)
 	{
 		if (size <= _in - _out)
 		{
@@ -44,12 +44,15 @@ private:
 		else
 		{
 			unsigned int readSize = size - (_in - _out);
+			while (readSize > _in - _out)
+			{
+				_readSem.WaitForSignal();
+			}
 			ReadDataPointer(data, readSize);
-			_readSem.WaitForSignal();
 			ReadDataPointer(data + readSize, size - readSize);
 		}
 	}
-	FORCE_INLINE void WriteDataPointer(const char* data, unsigned int size)
+	void WriteDataPointer(const char* data, unsigned int size)
 	{
 		if (size <= MAX_SIZE - _in + _out)
 		{
@@ -64,12 +67,15 @@ private:
 		else
 		{
 			unsigned int writeSize = size - (MAX_SIZE - _in + _out);
-			WriteDataPointer(data, writeSize);
-			_writeSem.WaitForSignal();
+			while (writeSize > MAX_SIZE - _in + _out)
+			{
+				_writeSem.WaitForSignal();
+			}
+			WriteDataPointer(data, writeSize);			
 			WriteDataPointer(data + writeSize, size - writeSize);
 		}
 	}
-	FORCE_INLINE size_t Align(size_t pos, size_t alignment) const { return (pos + alignment - 1)&~(alignment - 1); }
+	size_t Align(size_t pos, size_t alignment) const { return (pos + alignment - 1)&~(alignment - 1); }
 public:
 	RingBuffer()
 		:_in(0), _out(0)
@@ -77,16 +83,16 @@ public:
 		_tempbufer.reserve(1024);
 	}
 public:
-	template<class T> FORCE_INLINE void Write(const T& v)
+	template<class T>  void Write(const T& v)
 	{
 		auto size = Align(sizeof(T), ALIGN_OF(T));
 		WriteDataPointer((const char*)&v,size);
 	}
-	template<class T> FORCE_INLINE const T& Read()
+	template<class T>  const T& Read()
 	{
 		auto size = Align(sizeof(T), ALIGN_OF(T));
 		_tempbufer.resize(size);
-		return ReadDataPointer<T>((char*)&_tempbufer[0],size);
+		ReadDataPointer((char*)&_tempbufer[0],size);
 		return *reinterpret_cast<const T*>(&_tempbufer[0]);
 	}
 

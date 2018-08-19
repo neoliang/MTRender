@@ -58,9 +58,28 @@ DemoBase* DemoBase::Instnce()
 	}
 	return gs_demo;
 }
-
+#include "RingBuffer.h"
 void DemoBase::Init()
 {
+	//≤‚ ‘ringbuffer
+	RingBuffer* buffer = new RingBuffer();
+	std::thread s1 = std::thread([&]() {
+		for (int i = 0; i < 1000; ++i)
+		{
+			auto v = buffer->Read<int>();
+			if (i == 999)
+			{
+				esLogMessage("ringbuffer v %d", v);
+			}
+		}
+	});
+	for (int i = 0; i < 1000; ++i)
+	{
+		buffer->Write<int>(i);
+	}
+	s1.join();
+	delete buffer;
+
 	_meshes = Mesh::LoadMeshFromFile("monkey.babylon");
 	auto tM = _meshes[0];
 	for (int i = 0; i < 40; ++i)
@@ -143,9 +162,9 @@ void SimulateBusy()
 }
 void DemoBase::Update(float dt)
 {
-	BeginProfile("SimulateBusy");
+	//BeginProfile("SimulateBusy");
 	SimulateBusy();
-	EndProfile();
+	//EndProfile();
 	++g_accCount;
 	g_accTime += dt;
 	float avgFps = 1.0f / (g_accTime / g_accCount);
@@ -156,7 +175,7 @@ void DemoBase::Update(float dt)
 	{
 		mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
 	}
-	esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
+	//esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
 }
 
 
@@ -217,7 +236,6 @@ void OnGainFocus()
 	//g_device->ReleaseThreadOwnership();
 }
 bool inited = false;
-
 int esMain(ESContext *esContext)
 {
 	esLogMessage("esMain ( ESContext *esContext )");
@@ -226,6 +244,7 @@ int esMain(ESContext *esContext)
 	esRegisterShutdownFunc(esContext, Shutdown);
 	esRegisterDrawFunc(esContext, Draw);
 	esRegisterUpdateFunc(esContext, Update);
+
 
 	return GL_TRUE;
 }
