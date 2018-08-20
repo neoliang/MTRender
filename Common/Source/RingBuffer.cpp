@@ -3,12 +3,13 @@
 #include "RingBuffer.h"
 #include "PlatformMutex.h"
 #include "PlatformSemaphore.h"
-
+#include <assert.h>
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 
 
 RingBuffer::RingBuffer(size_t size)
 {
+	assert(size >= 2 * kDefaultStep);
 	SetDefaults();
 	Create(size);
 }

@@ -70,7 +70,6 @@ namespace RenderEngine {
 	public:
 		ThreadESDevice(ESContext* context,bool returnResImmediately);
 		~ThreadESDevice();
-		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags);
 		virtual void Clear();
 		virtual void UseGPUProgram(GPUProgram* program);
 		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader);

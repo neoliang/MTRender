@@ -20,6 +20,7 @@ LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.cpp \
 				   $(COMMON_SRC_PATH)/esTransform.cpp \
 				   $(COMMON_SRC_PATH)/esUtil.cpp \
 				   $(COMMON_SRC_PATH)/Android/esUtil_Android.cpp \
+				   $(COMMON_SRC_PATH)/ThreadBufferESDevice.cpp \
 				   $(COMMON_PATH)/ESDevice.cpp \
 				   $(COMMON_PATH)/ThreadESDevice.cpp \
 				   $(COMMON_SRC_PATH)/DemoBase.cpp \

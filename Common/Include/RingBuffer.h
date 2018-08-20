@@ -44,7 +44,7 @@ public:
 	enum
 	{
 		kDefaultAlignment = 4,
-		kDefaultStep = 512
+		kDefaultStep = 2048
 	};
 
 	// Read data from the ringbuffer

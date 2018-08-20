@@ -63,7 +63,7 @@ void DemoBase::Init()
 {
 	//≤‚ ‘ringbuffer
 	auto fileContent = readFileData("monkey.babylon");
-	RingBuffer* buffer = new RingBuffer(1024);
+	RingBuffer* buffer = new RingBuffer(4096);
 	std::thread s1 = std::thread([&]() {
 		for (int i = 0; i < 10000; ++i)
 		{

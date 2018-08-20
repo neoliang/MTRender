@@ -27,52 +27,6 @@ namespace RenderEngine {
 
 #define AUTOLOCK
 	//#define AUTOLOCK AutoLock lock(_mutex);
-	class DeleteGPUProgramCMD;
-	class ThreadedGPUProgram : public GPUProgram
-	{
-		friend class DeleteGPUProgramCMD;
-		friend class ThreadESDevice;
-	public:
-		GPUProgram * realProgram;
-		ThreadedGPUProgram() :realProgram(NULL) {}
-		GPUProgram* GetRealGUPProgram()
-		{
-			return realProgram;
-		}
-	protected:
-		~ThreadedGPUProgram() {}
-	};
-
-	class DeleteTexture2DCMD;
-	class ThreadedTexture2D : public Texture2D
-	{
-		friend class DeleteTexture2DCMD;
-		friend class ThreadESDevice;
-	public:
-		Texture2D * realTexture;
-		ThreadedTexture2D():realTexture(NULL){}
-		Texture2D* GetRealTexture2D()
-		{
-			return realTexture;
-		}
-	protected:
-		~ThreadedTexture2D() {}
-	};
-	class DeleteVBOCMD;
-	class ThreadedVBO : public VBO
-	{
-		friend class ThreadESDevice;
-		friend class DeleteVBOCMD;
-	public:
-		VBO * realVbo;
-	protected:
-		~ThreadedVBO() {}
-	public:
-		virtual VBO* GetRealVBO()
-		{
-			return realVbo;
-		}
-	};
 
 	class ClearCMD : public ThreadDeviceCommand
 	{
@@ -324,11 +278,6 @@ namespace RenderEngine {
 	void ReleasOwnerShipCMD::OnExecuteEnd(ThreadESDevice * threadDevice)
 	{
 		threadDevice->SignalOnwerShip();
-	}
-
-	bool ThreadESDevice::CreateWindow1(const std::string& title, int width, int height, int flags)
-	{
-		return _realDevice->CreateWindow1(title, width, height, flags);
 	}
 	void ThreadESDevice::Clear()
 	{

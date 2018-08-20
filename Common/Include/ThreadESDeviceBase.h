@@ -5,6 +5,52 @@
 #include "esUtil.h"
 #include "PlatformSemaphore.h"
 namespace RenderEngine {
+
+	class ThreadedGPUProgram : public GPUProgram
+	{
+		friend class DeleteGPUProgramCMD;
+		friend class ThreadESDevice;
+	public:
+		GPUProgram * realProgram;
+		ThreadedGPUProgram() :realProgram(NULL) {}
+		GPUProgram* GetRealGUPProgram()
+		{
+			return realProgram;
+		}
+	protected:
+		~ThreadedGPUProgram() {}
+	};
+
+	class ThreadedTexture2D : public Texture2D
+	{
+		friend class DeleteTexture2DCMD;
+		friend class ThreadESDevice;
+	public:
+		Texture2D * realTexture;
+		ThreadedTexture2D() :realTexture(NULL) {}
+		Texture2D* GetRealTexture2D()
+		{
+			return realTexture;
+		}
+	protected:
+		~ThreadedTexture2D() {}
+	};
+
+	class ThreadedVBO : public VBO
+	{
+		friend class ThreadESDevice;
+		friend class DeleteVBOCMD;
+	public:
+		VBO * realVbo;
+	protected:
+		~ThreadedVBO() {}
+	public:
+		virtual VBO* GetRealVBO()
+		{
+			return realVbo;
+		}
+	};
+
 	class ThreadESDeviceBase : public ESDevice
 	{
 	public:
@@ -39,6 +85,10 @@ namespace RenderEngine {
 		{
 			esLogMessage("[render] ThreadESDevice");
 			_realDevice = new ESDeviceImp(context);
+		}
+		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags)
+		{
+			return _realDevice->CreateWindow1(title, width, height, flags);
 		}
 		virtual void Cleanup()
 		{
