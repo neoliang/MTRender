@@ -121,7 +121,7 @@ namespace RenderEngine {
 		glDeleteProgram(static_cast<GPUProgramImp*>(program)->ProgramID);
 		delete program;
 	}
-	Texture2D* ESDeviceImp::CreateTexture2D(int width, int height, const void* data)
+	Texture2D* ESDeviceImp::CreateTexture2D(int width, int height, const void* data,int dataLen)
 	{
 		GLuint textureID = 0;
 		glActiveTexture(GL_TEXTURE0);

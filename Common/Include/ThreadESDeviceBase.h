@@ -17,7 +17,6 @@ namespace RenderEngine {
 		{
 			return realProgram;
 		}
-	protected:
 		~ThreadedGPUProgram() {}
 	};
 
@@ -32,7 +31,6 @@ namespace RenderEngine {
 		{
 			return realTexture;
 		}
-	protected:
 		~ThreadedTexture2D() {}
 	};
 
@@ -42,7 +40,6 @@ namespace RenderEngine {
 		friend class DeleteVBOCMD;
 	public:
 		VBO * realVbo;
-	protected:
 		~ThreadedVBO() {}
 	public:
 		virtual VBO* GetRealVBO()

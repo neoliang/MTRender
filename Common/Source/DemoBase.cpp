@@ -140,11 +140,10 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 #endif
 	}
 	_device->SetClearColor(0.0f, 0.0f, 0.6f, 0.0f);
-	int width,
+	int width,dataLen,
 		height;
-
-	char *buffer = esLoadTGA(esContext->platformData, "basemap.tga", &width, &height);
-	_texture = _device->CreateTexture2D(width, height, buffer);
+	char *buffer = esLoadTGA(esContext->platformData, "basemap.tga", &width, &height,&dataLen);
+	_texture = _device->CreateTexture2D(width, height, buffer,dataLen);
 	_program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
 	for (auto mesh : _meshes)
 	{

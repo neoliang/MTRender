@@ -257,7 +257,7 @@ int ESUTIL_API esGenSquareGrid ( int size, GLfloat **vertices, GLuint **indices 
 /// \param height Height of loaded image in pixels
 ///  \return Pointer to loaded image.  NULL on failure.
 //
-char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, int *height );
+char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, int *height , int *dataLen);
 
 
 //

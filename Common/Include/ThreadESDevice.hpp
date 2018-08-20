@@ -74,7 +74,7 @@ namespace RenderEngine {
 		virtual void UseGPUProgram(GPUProgram* program);
 		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader);
 		virtual void DeletGPUProgram(GPUProgram* program);
-		virtual Texture2D* CreateTexture2D(int width, int height, const void* data);
+		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen);
 		virtual void DeleteTexture2D(Texture2D* texture);
 		virtual void UseTexture2D(Texture2D* texture);
 		virtual void SetClearColor(float r, float g, float b, float alpha);

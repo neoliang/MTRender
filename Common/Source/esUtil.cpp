@@ -406,13 +406,13 @@ std::string ESUTIL_API readFileData(const std::string& filename)
 //
 //    Loads a 8-bit, 24-bit or 32-bit TGA image from a file
 //
-char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, int *height )
+char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, int *height,int *dataLen )
 {
    char        *buffer;
    esFile      *fp;
    TGA_HEADER   Header;
    int          bytesRead;
-
+   *dataLen = 0;
    // Open the file for reading
    fp = esFileOpen ( ioContext, fileName );
 
@@ -439,6 +439,7 @@ char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, 
       if ( buffer )
       {
          bytesRead = esFileRead ( fp, bytesToRead, buffer );
+		 *dataLen = bytesRead;
          esFileClose ( fp );
 
          return ( buffer );

@@ -47,23 +47,67 @@ namespace RenderEngine
 		}
 		else
 		{
-
+			_commandBuffer->WriteValueType(kGfxCmd_UseGPUProgram);
+			_commandBuffer->WriteValueType<ThreadedGPUProgram*>(threadedP);
+			_commandBuffer->WriteSubmitData();
 		}
 	}
 
 	RenderEngine::GPUProgram* ThreadBufferESDevice::CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader)
 	{
-		return nullptr;
+		ThreadedGPUProgram* program = new ThreadedGPUProgram();
+		if (!_threaded)
+		{
+			program->realProgram = _realDevice->CreateGPUProgram(vertexShader, fragmentShader);
+		}
+		else
+		{
+			_commandBuffer->WriteValueType(kGfxCmd_CreateGPUProgram);
+			_commandBuffer->WriteStreamingData(vertexShader.c_str(), vertexShader.size());
+			_commandBuffer->WriteStreamingData(fragmentShader.c_str(), fragmentShader.size());
+			_commandBuffer->WriteValueType<ThreadedGPUProgram*>(program);
+			_commandBuffer->WriteSubmitData();
+			if (_returnResImmediately)
+			{
+				WaitForSignal(WaitType_CreateShader);
+			}
+		}
+		return program;
 	}
 
 	void ThreadBufferESDevice::DeletGPUProgram(GPUProgram* program)
 	{
-
+		ThreadedGPUProgram* threadedP = static_cast<ThreadedGPUProgram*>(program);
+		if (!_threaded)
+		{
+			_realDevice->DeletGPUProgram(threadedP->realProgram);
+			delete threadedP;
+		}
+		else
+		{
+			_commandBuffer->WriteValueType(kGfxCmd_DeleteGPUProgram);
+			_commandBuffer->WriteValueType<ThreadedGPUProgram*>(threadedP);
+			_commandBuffer->WriteSubmitData();
+		}
 	}
 
-	RenderEngine::Texture2D* ThreadBufferESDevice::CreateTexture2D(int width, int height, const void* data)
+	Texture2D* ThreadBufferESDevice::CreateTexture2D(int width, int height, const void* data, int dataLen)
 	{
-		return nullptr;
+		ThreadedTexture2D* texture = new ThreadedTexture2D();
+		if (!_threaded)
+		{
+			texture->realTexture = _realDevice->CreateTexture2D(width, height, data,dataLen);
+		}
+		else
+		{
+
+			if (_returnResImmediately)
+			{
+				WaitForSignal(WaitType_CreateTexture);
+			}
+
+		}
+		return texture;
 	}
 
 	void ThreadBufferESDevice::DeleteTexture2D(Texture2D* texture)

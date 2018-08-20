@@ -183,16 +183,17 @@ namespace RenderEngine {
 	private:
 		int _width;
 		int _height;
+		int _dataLen;
 		const void* _data;
 		ThreadedTexture2D* _texture;
 	public:
-		CreateTexture2DCMD(int width, int height, const void* data, ThreadedTexture2D* tex)
+		CreateTexture2DCMD(int width, int height, const void* data, ThreadedTexture2D* tex,int dataLen)
 			:_width(width), _height(height), _data(data),_texture(tex)
 		{
 		}
 		void Execute(ESDevice* device)
 		{
-			_texture->realTexture = device->CreateTexture2D(_width, _height, _data);
+			_texture->realTexture = device->CreateTexture2D(_width, _height, _data, _dataLen);
 		}
 		void OnExecuteEnd(ThreadESDevice* threadDevice)
 		{
@@ -495,16 +496,16 @@ namespace RenderEngine {
 		}
 	}
 
-	Texture2D* ThreadESDevice::CreateTexture2D(int width, int height, const void* data)
+	Texture2D* ThreadESDevice::CreateTexture2D(int width, int height, const void* data, int dataLen)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
 		if (!_threaded)
 		{
-			texture->realTexture = _realDevice->CreateTexture2D(width, height, data);
+			texture->realTexture = _realDevice->CreateTexture2D(width, height, data,dataLen);
 		}
 		else
 		{
-			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(width, height, data, texture);
+			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(width, height, data, texture,dataLen);
 			AUTOLOCK
 				_commandQueue.push(cmd);
 			if (_returnResImmediately)
