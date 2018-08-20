@@ -64,11 +64,14 @@ void DemoBase::Init()
 	//≤‚ ‘ringbuffer
 	auto fileContent = readFileData("monkey.babylon");
 	RingBuffer* buffer = new RingBuffer();
+	std::mutex _lock;
 	std::thread s1 = std::thread([&]() {
 		for (int i = 0; i < 1000; ++i)
 		{
-			auto v = buffer->Read<char>();
-			if (i == 999)
+			_lock.lock();
+			auto v = buffer->Read<int>();
+			_lock.unlock();
+			//if (i >= 900)
 			{
 				esLogMessage("ringbuffer v %d", v);
 			}
@@ -89,7 +92,7 @@ void DemoBase::Init()
 	});
 	for (int i = 0; i < 1000; ++i)
 	{
-		buffer->Write<char>((char)i);
+		buffer->Write<int>(i);
 	}
 	buffer->WriteStreamingData(fileContent.c_str(), fileContent.size());
 	s1.join();

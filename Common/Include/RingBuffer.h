@@ -3,81 +3,80 @@
 #include "esUtil.h"
 #include "PlatformSemaphore.h"
 #include <vector>
-
+#include <mutex>
 
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 class RingBuffer
 {
 	const static int MAX_SIZE = 1024;
 	char _bufer[MAX_SIZE];
-	unsigned long long _in;
-	unsigned long long _out;
+	unsigned long  _readPos;
+	unsigned long  _writePos;
 	Semaphore _readSem;
 	Semaphore _writeSem;
 	std::vector<char> _tempbufer;
 
+#define  currentCanBeReadSzie ((MAX_SIZE + _in - _out)&(MAX_SIZE - 1))
+#define currentCanbeWriteSize ( MAX_SIZE + _out - _in)
 private:
 	void ReadDataPointer(char* data, unsigned int size, unsigned int alignment)
 	{
+		
 		unsigned int StepSize = Align(size, alignment);
-		if (StepSize <= _in - _out)
-		{
-			unsigned int l = min(size, MAX_SIZE - (_out & (MAX_SIZE - 1)));
-			//barrier
-			memcpy(data, _bufer + (_out & (MAX_SIZE - 1)), l);
-			memcpy(data + l, _bufer, size - l);
-			//barrier
-			_out += StepSize;
-			_writeSem.Signal();
+		unsigned int nextPos = (_readPos + StepSize)&(MAX_SIZE - 1);
+		unsigned int tempWritePos = _writePos;
+		while (_readPos == tempWritePos
+			|| (_readPos > tempWritePos && tempWritePos < nextPos && nextPos < _readPos)
+			|| (_readPos < tempWritePos && (nextPos < _readPos || nextPos > tempWritePos)))
+		{		
+			_readSem.WaitForSignal();
+			tempWritePos = _writePos;
 		}
-		else
-		{
-			unsigned int readSize = size - (_in - _out);
-			unsigned int readStepSize = Align(readSize, alignment);
-			while (readStepSize > _in - _out)
-			{
-				_readSem.WaitForSignal();
-			}
-			ReadDataPointer(data, readSize,alignment);
-			if (size - readSize > 0)
-			{
-				ReadDataPointer(data + readSize, size - readSize, alignment);
-			}
-		}
+		//_lock.lock();
+		unsigned int l = min(size, MAX_SIZE - (_readPos & (MAX_SIZE - 1)));
+		long temp;
+		__asm xchg temp, eax;
+		//barrier
+		memcpy(data, _bufer + (_readPos & (MAX_SIZE - 1)), l);
+		memcpy(data + l, _bufer, size - l);
+		__asm xchg temp, eax;
+		//barrier
+		_readPos = (_readPos + StepSize) & (MAX_SIZE - 1);
+		//_lock.unlock();
+		_writeSem.Signal();
+		
 	}
+
 	void WriteDataPointer(const char* data, unsigned int size, unsigned int alignment)
 	{
 		unsigned int StepSize = Align(size, alignment);
-		if (StepSize <= MAX_SIZE - _in + _out)
+		unsigned int writePos = _writePos;
+		unsigned int readPos = _readPos;
+		unsigned int nextPos = (writePos + StepSize) & (MAX_SIZE - 1);
+		while ( nextPos == readPos 
+			|| (writePos < readPos && nextPos >= readPos)
+			|| (writePos > readPos && nextPos >= readPos && nextPos < writePos))
 		{
-			unsigned int l = min(size, MAX_SIZE - (_in  & (MAX_SIZE - 1)));
-			//barrier
-			memcpy(_bufer + (_in & (MAX_SIZE - 1)), data, l);
-			memcpy(_bufer, (data + l), size - l);
-			//barrier
-			_in = _in + StepSize;
-			_readSem.Signal();
+			_writeSem.WaitForSignal();
+			readPos = _readPos;
 		}
-		else
-		{
-			unsigned int writeSize = size - (MAX_SIZE - _in + _out);
-			unsigned int writeStepSize = Align(writeSize, alignment);
-			while (writeSize > MAX_SIZE - _in + _out)
-			{
-				_writeSem.WaitForSignal();
-			}
-			WriteDataPointer(data, writeSize,alignment);
-			if (size - writeSize > 0)
-			{
-				WriteDataPointer(data + writeSize, size - writeSize, alignment);
-			}
-		}
+		//_lock.lock();
+		unsigned int l = min(size, MAX_SIZE - (_writePos  & (MAX_SIZE - 1)));
+		//barrier
+		memcpy(_bufer + (_writePos & (MAX_SIZE - 1)), data, l);
+		//放在buffer的最开始
+		memcpy(_bufer, (data + l), size - l);
+		//barrier
+		
+		_writePos = (_writePos + StepSize) & (MAX_SIZE - 1);
+		//_lock.unlock();
+		_readSem.Signal();
 	}
 public:
-	static unsigned int Align(unsigned int pos, unsigned int alignment)  { return (pos + alignment - 1)&~(alignment - 1); }
+	static unsigned int Align(unsigned int pos, unsigned int alignment) { return (pos + alignment - 1)&~(alignment - 1); }
 public:
 	RingBuffer()
-		:_in(0), _out(0)
+		:_readPos(0), _writePos(0)
 	{
 		_tempbufer.reserve(1024);
 	}
@@ -92,13 +91,13 @@ public:
 	template<class T>  void Write(const T& v)
 	{
 		auto size = sizeof(T);
-		WriteDataPointer((const char*)&v,size, kDefaultAlignment);
+		WriteDataPointer((const char*)&v, size, kDefaultAlignment);
 	}
 	template<class T>  const T& Read()
 	{
 		auto size = sizeof(T);
 		_tempbufer.resize(size);
-		ReadDataPointer((char*)&_tempbufer[0],size, kDefaultAlignment);
+		ReadDataPointer((char*)&_tempbufer[0], size, kDefaultAlignment);
 		return *reinterpret_cast<const T*>(&_tempbufer[0]);
 	}
 
