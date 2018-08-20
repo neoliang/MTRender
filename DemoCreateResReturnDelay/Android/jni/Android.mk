@@ -14,6 +14,7 @@ LOCAL_CFLAGS	+= -DGLM_ENABLE_EXPERIMENTAL
 
 
 LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.cpp \
+				   $(COMMON_SRC_PATH)/RingBuffer.cpp \
 				   $(COMMON_PATH)/Mesh.cpp \
 				   $(COMMON_SRC_PATH)/esShapes.cpp \
 				   $(COMMON_SRC_PATH)/esTransform.cpp \

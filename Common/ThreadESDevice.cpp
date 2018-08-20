@@ -7,6 +7,7 @@
 //
 
 #include "ThreadESDevice.hpp"
+#include <mutex>
 namespace RenderEngine {
 	class AutoLock
 	{
@@ -371,23 +372,12 @@ namespace RenderEngine {
 			_commandQueue.push(new DrawTriangleCMD(vertices));
 	}
 	ThreadESDevice::ThreadESDevice(ESContext* context, bool returnResImmediately)
-		:_returnResImmediately(returnResImmediately)
-		, _threaded(false)
-		,_quit(false)
-		,_isInPresenting(false)
+		:ThreadESDeviceBase(context,returnResImmediately)
 	{
 		esLogMessage("[render] ThreadESDevice");
-		_realDevice = new ESDeviceImp(context);
 	}
 	ThreadESDevice::~ThreadESDevice()
 	{
-		esLogMessage("[render] ~ThreadESDevice %d", (int)_threaded);
-	}
-	void ThreadESDevice::Cleanup()
-	{
-		_quit = true;
-		_thread.join();
-		delete _realDevice;
 	}
 	void ThreadESDevice::BeginRender()
 	{
@@ -446,24 +436,12 @@ namespace RenderEngine {
 		WaitForOwnerShip();
 		_threaded = true;
 	}
-	void ThreadESDevice::_RunCommand()
+	void ThreadESDevice::RunOneThreadCommand()
 	{
-		esLogMessage("[render] __RunCommand()");
-		_threaded = true;
-		_realDevice->AcqiureThreadOwnerShip();
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-		Signal();
-		while (!_quit) {
-			//usleep(10);
-			if (_threaded) {
-				ThreadDeviceCommand* cmd = _commandQueue.Pop();
-				cmd->Execute(_realDevice);
-				cmd->OnExecuteEnd(this);
-				delete cmd;
-			}
-		}
-		esLogMessage("[render] __RunCommand() end");
+		ThreadDeviceCommand* cmd = _commandQueue.Pop();
+		cmd->Execute(_realDevice);
+		cmd->OnExecuteEnd(this);
+		delete cmd;
 	}
 
 	void PresentCMD::OnExecuteEnd(ThreadESDevice* threadDevice)
@@ -615,20 +593,5 @@ namespace RenderEngine {
 			AUTOLOCK
 				_commandQueue.push(new UseTexture2DCMD(threadedText));
 		}
-	}
-	void* ThreadESDevice::_Run(void* data)
-	{
-		esLogMessage("[render] _Run(void* data)");
-		ThreadESDevice* self = (ThreadESDevice*)data;
-		self->_RunCommand();
-		esLogMessage("[render] _Run(void* data) end");
-		return 0;
-	}
-	void ThreadESDevice::Run()
-	{
-		esLogMessage("[render] ThreadESDevice::Run()");
-		_thread = std::thread(&ThreadESDevice::_Run, (void*)this);
-		//_realDevice->AcqiureThreadOwnerShip();
-		this->WaitForSignal();
 	}
 }

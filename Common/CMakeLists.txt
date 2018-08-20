@@ -2,6 +2,7 @@ set ( common_src Source/esShader.cpp
                  Source/esShapes.cpp
                  Source/esTransform.cpp
                  Source/esUtil.cpp
+				 Source/ThreadBufferESDevice.cpp
 				 ESDevice.cpp
 				 ThreadESDevice.cpp
 				 Mesh.cpp
