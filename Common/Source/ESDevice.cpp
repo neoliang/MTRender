@@ -210,26 +210,31 @@ namespace RenderEngine {
 		auto pos = transMat * glm::vec4(coord, 1.0f);
 		return glm::vec3(pos.x, pos.y, pos.z) / pos.w;
 	}
-	VBO* ESDeviceImp::CreateVBO(std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	VBO* ESDeviceImp::CreateVBO()
 	{
 		auto vbo = new VBOImp();
 		glGenVertexArrays(1, &vbo->vertexArrayID);
 		glBindVertexArray(vbo->vertexArrayID);
-
 		glGenBuffers(1, &vbo->vertexbuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo->vertexbuffer);
+		glGenBuffers(1, &vbo->uvbuffer);
+		glGenBuffers(1, &vbo->elementbuffer);
+		return vbo;
+	}
+	void ESDeviceImp::UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	{
+		auto vboImp = (VBOImp*) vbo;
+
+
+		glBindBuffer(GL_ARRAY_BUFFER, vboImp->vertexbuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
-		glGenBuffers(1, &vbo->uvbuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo->uvbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, vboImp->uvbuffer);
 		glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 
 
-		glGenBuffers(1, &vbo->elementbuffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo->elementbuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-		vbo->elementSize = indices.size();
-		return vbo;
+		vboImp->elementSize = indices.size();
 	}
 	void ESDeviceImp::DeleteVBO(VBO* vbo)
 	{

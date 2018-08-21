@@ -19,6 +19,7 @@ namespace RenderEngine
 		kGfxCmd_AcqiureThreadOwnerShip,
 		kGfxCmd_ReleaseThreadOwnership,
 		kGfxCmd_CreateVBO,
+		kGfxCmd_UpdateVBO,
 		kGfxCmd_DeleteVBO,
 		kGfxCmd_DrawVBO,
 		kGfxCmd_SetGPUProgramAsInt,
@@ -252,32 +253,45 @@ namespace RenderEngine
 		WaitForOwnerShip();
 		_threaded = true;
 	}
-	struct GfxCmdCreateVBOData
+	struct GfxCmdUpdateVBOData
 	{
 		ThreadedVBO* vbo;
 		unsigned int verticesCount;
 		unsigned int indicesCount;
 
 	};
-	RenderEngine::VBO* ThreadBufferESDevice::CreateVBO(std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	VBO* ThreadBufferESDevice::CreateVBO()
 	{
-		auto vbo = new ThreadedVBO();
+		ThreadedVBO* threadvbo = new ThreadedVBO();
 		if (!_threaded)
 		{
-			vbo->realVbo = _realDevice->CreateVBO(vertices, uvs, indices);
+			threadvbo->realVbo =  _realDevice->CreateVBO();
 		}
 		else
 		{
 			_commandBuffer->WriteValueType(kGfxCmd_CreateVBO);
-			GfxCmdCreateVBOData data{
-				vbo,vertices.size(),indices.size()
+			_commandBuffer->WriteValueType(threadvbo);
+			_commandBuffer->WriteSubmitData();
+		}
+		return threadvbo;
+	}
+	void ThreadBufferESDevice::UpdateVBO(VBO* vbo, std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	{
+		if (!_threaded)
+		{
+			_realDevice->UpdateVBO(vbo,vertices, uvs, indices);
+		}
+		else
+		{
+			_commandBuffer->WriteValueType(kGfxCmd_UpdateVBO);
+			GfxCmdUpdateVBOData data{
+				(ThreadedVBO*)vbo,vertices.size(),indices.size()
 			};
 			_commandBuffer->WriteValueType(data);
 			_commandBuffer->WriteStreamingData(&vertices[0],data.verticesCount*sizeof(glm::vec3));
 			_commandBuffer->WriteStreamingData(&uvs[0],data.verticesCount*sizeof(glm::vec2));
 			_commandBuffer->WriteStreamingData(&indices[0],data.indicesCount*sizeof(unsigned short));
 		}
-		return vbo;
 	}
 
 	void ThreadBufferESDevice::DeleteVBO(VBO* vbo)
@@ -537,8 +551,15 @@ namespace RenderEngine
 			break;
 		}
 		case RenderEngine::kGfxCmd_CreateVBO:
+		{
+			ThreadedVBO* threadedVbo = _commandBuffer->ReadValueType<ThreadedVBO*>();
+			threadedVbo->realVbo = _realDevice->CreateVBO();
+			_commandBuffer->ReadReleaseData();
+			break;
+		}
+		case RenderEngine::kGfxCmd_UpdateVBO:
 		{	
-			GfxCmdCreateVBOData data = _commandBuffer->ReadValueType<GfxCmdCreateVBOData>();
+			GfxCmdUpdateVBOData data = _commandBuffer->ReadValueType<GfxCmdUpdateVBOData>();
 			std::vector<glm::vec3> vertices;
 			std::vector<glm::vec2> uvs;
 			std::vector<unsigned short> indices;
@@ -548,7 +569,7 @@ namespace RenderEngine
 			_commandBuffer->ReadStreamingData((void*)&vertices[0], data.verticesCount * sizeof(glm::vec3));
 			_commandBuffer->ReadStreamingData((void*)&uvs[0], data.verticesCount * sizeof(glm::vec2));
 			_commandBuffer->ReadStreamingData((void*)&indices[0], data.indicesCount * sizeof(unsigned short));
-			data.vbo->realVbo = _realDevice->CreateVBO(vertices, uvs, indices);
+			_realDevice->UpdateVBO(data.vbo->realVbo, vertices, uvs, indices);
 			break;
 		}
 		case RenderEngine::kGfxCmd_DeleteVBO:

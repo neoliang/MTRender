@@ -60,7 +60,8 @@ namespace RenderEngine {
 		virtual void ReleaseThreadOwnership() =0;
 		virtual void BeginRender() = 0;
 		virtual void Present() = 0;
-		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+		virtual VBO* CreateVBO()=0;
+		virtual void UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices,
 			std::vector<glm::vec2> uvs,
 			std::vector<unsigned short> indices)=0;
 		virtual void DeleteVBO(VBO* vbo) = 0;
@@ -114,7 +115,8 @@ namespace RenderEngine {
 		virtual void Draw2DPoint(const glm::vec2& pos);
 		virtual void DrawLine(const std::vector<glm::vec3>& line);
 		virtual glm::vec3 Project(const glm::vec3& coord, const glm::mat4& transMat);
-		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+		virtual VBO* CreateVBO();
+		virtual void UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices,
 			std::vector<glm::vec2> uvs,
 			std::vector<unsigned short> indices);
 		virtual void DeleteVBO(VBO* vbo);

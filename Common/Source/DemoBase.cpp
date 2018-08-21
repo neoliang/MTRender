@@ -43,9 +43,9 @@ const std::string fShaderStr =
 DemoBase*DemoBase::gs_demo(nullptr);
 bool DemoBase::gs_demoInited(false);
 
-DemoBase::DemoBase(bool multiThreaded, bool returnResImmediately)
-:_multiThreaded(multiThreaded)
-,_returnResImmediately(returnResImmediately)
+DemoBase::DemoBase(bool returnResImmediately,DeviceCreateType type)
+:_returnResImmediately(returnResImmediately)
+,_deviceCreateType(type)
 {
 	gs_demo = this;
 }
@@ -115,31 +115,38 @@ void DemoBase::Init()
 void DemoBase::OnCreateDevice(ESContext *esContext)
 {
 #ifdef __APPLE__
-	g_device = new ESDeviceImp(esContext);
+	_device = new ESDeviceImp(esContext);
 #else
-	if (_multiThreaded)
+	switch (_deviceCreateType)
 	{
+	case DemoBase::kThreadBuffer:
 		_device = new ThreadBufferESDevice(esContext, _returnResImmediately);
-	}
-	else
-	{
+		break;
+	case DemoBase::kThreadQueue:
+		_device = new ThreadESDevice(esContext, _returnResImmediately);
+		break;
+	default:
 		_device = new ESDeviceImp(esContext);
+		break;
 	}
 #endif
+	ThreadESDeviceBase* threadDevice = dynamic_cast<ThreadESDeviceBase*>(_device);
+
 	_device->CreateWindow1("Hello Triangle", 480, 320, ES_WINDOW_RGB | ES_WINDOW_DEPTH | ES_WINDOW_ALPHA);
-	if (!_multiThreaded)
+	if (threadDevice == nullptr)
 	{
 		_device->AcqiureThreadOwnerShip();
 		glEnable(GL_DEPTH_TEST);
 		// Accept fragment if it closer to the camera than the former one
 		glDepthFunc(GL_LESS);
 	}
-	else
-	{
+
 #ifndef __APPLE__
-		((ThreadBufferESDevice*)_device)->Run();
-#endif
+	if (threadDevice != nullptr)
+	{
+		threadDevice->Run();
 	}
+#endif
 	_device->SetClearColor(0.0f, 0.0f, 0.6f, 0.0f);
 	int width,dataLen,
 		height;
@@ -148,7 +155,8 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 	_program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
 	for (auto mesh : _meshes)
 	{
-		mesh->vbo = _device->CreateVBO(_meshes[0]->vertices, _meshes[0]->uvs, _meshes[0]->indices);
+		mesh->vbo = _device->CreateVBO();
+		_device->UpdateVBO(mesh->vbo, _meshes[0]->vertices, _meshes[0]->uvs, _meshes[0]->indices);
 	}
 }
 
@@ -189,11 +197,19 @@ void DemoBase::Update(float dt)
 	float newFPs = 1.0f / dt;
 	float delta = newFPs - g_fps;
 	g_fps = newFPs;
+	if (g_accCount > 1000)
+	{
+		g_accCount = 0;
+		g_accTime = 0;
+	}
 	for (auto mesh : _meshes)
 	{
 		mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
 	}
-	//esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
+	if (g_accCount % 200 == 0)
+	{
+		esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
+	}
 }
 
 

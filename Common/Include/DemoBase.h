@@ -5,6 +5,14 @@
 #include "Camera.hpp"
 class DemoBase
 {
+public:
+	enum DeviceCreateType
+	{
+		kThreadBuffer,
+		kThreadQueue,
+		kSingleThread,
+	};
+private:
 	RenderEngine::ESDevice* _device;
 	RenderEngine::GPUProgram* _program;
 	RenderEngine::Texture2D* _texture;
@@ -13,12 +21,13 @@ class DemoBase
 	std::vector<RenderEngine::Mesh::Ptr> _meshes; //= Mesh::Ptr(new Mesh("Cube", 8, 36));
 	RenderEngine::Camera::Ptr _camera; //= Camera::Ptr(new Camera);
 
-	bool _multiThreaded;
 	bool _returnResImmediately;
+	DeviceCreateType _deviceCreateType;
 	static DemoBase* gs_demo;
 	static bool gs_demoInited;
+
 public:
-	DemoBase(bool multiThreaded, bool returnResImmediately);
+	DemoBase(bool returnResImmediately, DeviceCreateType type);
 
 	static DemoBase* Instnce();
 	virtual void Init();

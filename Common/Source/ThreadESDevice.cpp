@@ -116,7 +116,7 @@ namespace RenderEngine {
 			delete _vbo;
 		}
 	};
-	class CreateVBOCMD : public ThreadDeviceCommand
+	class UpdateVBOCMD : public ThreadDeviceCommand
 	{
 	private:
 		std::vector<glm::vec3> _vertices;
@@ -124,11 +124,23 @@ namespace RenderEngine {
 		std::vector<unsigned short> _indices;
 		ThreadedVBO * _vbo;
 	public:
-		CreateVBOCMD(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec2>& uvs, const std::vector<unsigned short>& indices, ThreadedVBO *vbo)
+		UpdateVBOCMD(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec2>& uvs, const std::vector<unsigned short>& indices, ThreadedVBO *vbo)
 			:_vertices(vertices), _uvs(uvs), _indices(indices), _vbo(vbo) {}
 		void Execute(ESDevice* device)
 		{
-			_vbo->realVbo = device->CreateVBO(_vertices, _uvs, _indices);
+			device->UpdateVBO(_vbo->realVbo,_vertices, _uvs, _indices);
+		}
+	};
+	class CreateVBOCMD : public ThreadDeviceCommand
+	{
+	private:
+		ThreadedVBO * _vbo;
+	public:
+		CreateVBOCMD(ThreadedVBO *vbo)
+			:_vbo(vbo) {}
+		void Execute(ESDevice* device)
+		{
+			_vbo->realVbo = device->CreateVBO();
 		}
 		void OnExecuteEnd(ThreadESDevice* threadDevice)
 		{
@@ -446,24 +458,38 @@ namespace RenderEngine {
 		}
 		return program;
 	}
-	VBO* ThreadESDevice::CreateVBO(std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	VBO* ThreadESDevice::CreateVBO()
 	{
 		auto vbo = new ThreadedVBO();
 		if (!_threaded)
 		{
-			vbo->realVbo = _realDevice->CreateVBO(vertices,uvs,indices);
+			vbo->realVbo = _realDevice->CreateVBO();
 		}
 		else
 		{
-			CreateVBOCMD* cmd = new CreateVBOCMD(vertices,uvs,indices,vbo);
+			CreateVBOCMD* cmd = new CreateVBOCMD(vbo);
 			AUTOLOCK
-			_commandQueue.push(cmd);
+				_commandQueue.push(cmd);
 			if (_returnResImmediately)
 			{
 				this->WaitForSignal(WaitType_CreateVBO);
 			}
 		}
 		return vbo;
+	}
+	void ThreadESDevice::UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	{
+		ThreadedVBO* threadVbo = static_cast<ThreadedVBO*>(vbo);
+		if (!_threaded)
+		{
+			_realDevice->UpdateVBO(threadVbo->realVbo,vertices, uvs,indices);
+		}
+		else
+		{
+			UpdateVBOCMD* cmd = new UpdateVBOCMD(vertices,uvs,indices, threadVbo);
+			_commandQueue.push(cmd);
+
+		}
 	}
 	void ThreadESDevice::DeleteVBO(VBO* vbo)
 	{

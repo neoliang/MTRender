@@ -84,7 +84,8 @@ namespace RenderEngine {
 		virtual void Present();
 		virtual void AcqiureThreadOwnerShip();
 		virtual void ReleaseThreadOwnership();
-		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
+		virtual VBO* CreateVBO();
+		virtual void UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices,
 			std::vector<glm::vec2> uvs,
 			std::vector<unsigned short> indices);
 		virtual void DeleteVBO(VBO* vbo);
