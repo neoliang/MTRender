@@ -42,7 +42,6 @@
 
 #ifdef __cplusplus
 
-extern "C" {
 #endif
 
 
@@ -66,7 +65,6 @@ extern "C" {
 GLboolean WinCreate ( ESContext *esContext, const char *title );
 
 #ifdef __cplusplus
-}
 #endif
 
 #endif // ESUTIL_WIN_H

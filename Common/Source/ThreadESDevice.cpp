@@ -69,21 +69,6 @@ namespace RenderEngine {
 		{
 		}
 	};
-	class RednerCMD :public ThreadDeviceCommand
-	{
-		Camera::Ptr _came;
-		std::vector<Mesh::Ptr> _mesh;
-	public:
-		RednerCMD(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh)
-			:_came(camer), _mesh(mesh)
-		{
-
-		}
-		void Execute(ESDevice* device)
-		{
-			device->Render(_came, _mesh);
-		}
-	};
 	class SetViewPortCMD : public ThreadDeviceCommand
 	{
 	private:
@@ -233,8 +218,8 @@ namespace RenderEngine {
 	};
 	class CreateGPUProgramCMD : public ThreadDeviceCommand
 	{
-		const std::string& _vsrc;
-		const std::string& _fsrc;
+		const std::string _vsrc;
+		const std::string _fsrc;
 		ThreadedGPUProgram * _program;
 	public:
 		CreateGPUProgramCMD(const std::string& vertexShader, const std::string& fragmentShader, ThreadedGPUProgram* program)
@@ -350,18 +335,6 @@ namespace RenderEngine {
 				_commandQueue.push(new PresentCMD());
 		}
 	}
-
-	void ThreadESDevice::Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh)
-	{
-
-		if (!_threaded)
-		{
-			_realDevice->Render(camer, mesh);
-			return;
-		}
-		AUTOLOCK
-			_commandQueue.push(new RednerCMD(camer, mesh));
-	}
 	void RenderEngine::ThreadESDevice::AcqiureThreadOwnerShip()
 	{
 		esLogMessage("[render] AcqiureThreadOwnerShip %d", (int)_threaded);
@@ -394,11 +367,36 @@ namespace RenderEngine {
 		delete cmd;
 	}
 
+
 	void PresentCMD::OnExecuteEnd(ThreadESDevice* threadDevice)
 	{
 		threadDevice->SignalPresent();
 	}
 
+	class InitThreadGPUProgramParamCMD : public ThreadDeviceCommand
+	{
+		ThreadedGPUProgram* _program;
+		ThreadedGPUProgramParam* _param;
+		const std::string _name;
+	public:
+		InitThreadGPUProgramParamCMD(ThreadedGPUProgram* program, ThreadedGPUProgramParam* param, const std::string& name)
+			:_program(program), _param(param), _name(name) {}
+		void Execute(ESDevice* device)
+		{
+			_param->realParam = device->GetGPUProgramParam(_program->realProgram, _name);
+		}
+	};
+	void ThreadESDevice::InitThreadGPUProgramParam(ThreadedGPUProgram* program, ThreadedGPUProgramParam* param, const std::string& name)
+	{
+		if (!_threaded)
+		{
+			param->realParam = _realDevice->GetGPUProgramParam(program->realProgram, name);
+		}
+		else
+		{
+			_commandQueue.push(new InitThreadGPUProgramParamCMD(program,param,name));
+		}
+	}
 	void ThreadESDevice::UseGPUProgram(GPUProgram* program)
 	{
 		ThreadedGPUProgram* threadedP = static_cast<ThreadedGPUProgram*>(program);
@@ -429,7 +427,7 @@ namespace RenderEngine {
 	}
 	GPUProgram* ThreadESDevice::CreateGPUProgram(const std::string &vertexShaderStr, const std::string &fragmentShaderStr)
 	{
-		ThreadedGPUProgram* program = new ThreadedGPUProgram();
+		ThreadedGPUProgram* program = new ThreadedGPUProgram(this);
 		if (!_threaded)
 		{
 			program->realProgram = _realDevice->CreateGPUProgram(vertexShaderStr, fragmentShaderStr);
@@ -493,6 +491,160 @@ namespace RenderEngine {
 		{
 			AUTOLOCK
 				_commandQueue.push(new DrawVBOCMD(threadedVbo));
+		}
+	}
+	class SetGPUProgramParamAsIntCMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		int _value;
+	public:
+		SetGPUProgramParamAsIntCMD(GPUProgramParam* param, int value)
+			:_param(param), _value(value)
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsInt(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _value);
+		}
+	};
+	void ThreadESDevice::SetGPUProgramParamAsInt(GPUProgramParam* param, int value)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsInt(param->GetRealParam(), value);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsIntCMD(param,value));
+		}
+	}
+	class SetGPUProgramParamAsFloatCMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		float _value;
+	public:
+		SetGPUProgramParamAsFloatCMD(GPUProgramParam* param, float value)
+			:_param(param), _value(value) 
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsFloat(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _value);
+		}
+	};
+	void ThreadESDevice::SetGPUProgramParamAsFloat(GPUProgramParam* param, float value)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsFloat(param->GetRealParam(), value);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsFloatCMD(param, value));
+		}
+	}
+	class SetGPUProgramParamAsMat4CMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		glm::mat4 _value;
+	public:
+		SetGPUProgramParamAsMat4CMD(GPUProgramParam* param, glm::mat4 value)
+			:_param(param), _value(value) 
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsMat4(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _value);
+		}
+	};
+	void ThreadESDevice::SetGPUProgramParamAsMat4(GPUProgramParam* param, const glm::mat4& mat)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsMat4(param->GetRealParam(), mat);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsMat4CMD(param, mat));
+		}
+	}
+	class SetGPUProgramParamAsIntArrayCMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		std::vector<int> _values;
+	public:
+		SetGPUProgramParamAsIntArrayCMD(GPUProgramParam* param, const std::vector<int>& values)
+			:_param(param), _values(values)
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsIntArray(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _values);
+		}
+	};
+	void ThreadESDevice::SetGPUProgramParamAsIntArray(GPUProgramParam* param, const std::vector<int>& values)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsIntArray(param->GetRealParam(), values);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsIntArrayCMD(param, values));
+		}
+	}
+
+	class SetGPUProgramParamAsFloatArrayCMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		std::vector<float> _values;
+	public:
+		SetGPUProgramParamAsFloatArrayCMD(GPUProgramParam* param, const std::vector<float>& values)
+			:_param(param), _values(values)
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsFloatArray(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _values);
+		}
+	};
+
+	void ThreadESDevice::SetGPUProgramParamAsFloatArray(GPUProgramParam* param, const std::vector<float>& values)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsFloatArray(param->GetRealParam(), values);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsFloatArrayCMD(param, values));
+		}
+	}
+
+	class SetGPUProgramParamAsMat4ArrayCMD : public ThreadDeviceCommand
+	{
+	private:
+		GPUProgramParam * _param;
+		std::vector<glm::mat4> _values;
+	public:
+		SetGPUProgramParamAsMat4ArrayCMD(GPUProgramParam* param, const std::vector<glm::mat4>& values)
+			:_param(param), _values(values)
+		{}
+		void Execute(ESDevice* device)
+		{
+			device->SetGPUProgramParamAsMat4Array(static_cast<ThreadedGPUProgramParam*>(_param)->realParam, _values);
+		}
+	};
+
+	void ThreadESDevice::SetGPUProgramParamAsMat4Array(GPUProgramParam* param, const std::vector<glm::mat4>& values)
+	{
+		if (!_threaded)
+		{
+			_realDevice->SetGPUProgramParamAsMat4Array(param->GetRealParam(), values);
+		}
+		else
+		{
+			_commandQueue.push(new SetGPUProgramParamAsMat4ArrayCMD(param, values));
 		}
 	}
 

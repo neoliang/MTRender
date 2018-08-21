@@ -30,7 +30,6 @@ namespace RenderEngine {
 		virtual void SetViewPort(int x, int y, int width, int height);
 		virtual void BeginRender();
 		virtual void Present();
-		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh);
 		virtual void AcqiureThreadOwnerShip();
 		virtual void ReleaseThreadOwnership();
 		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
@@ -38,6 +37,21 @@ namespace RenderEngine {
 			std::vector<unsigned short> indices);
 		virtual void DeleteVBO(VBO* vbo);
 		virtual void DrawVBO(VBO* vbo);
+
+		virtual void SetGPUProgramParamAsInt(GPUProgramParam* param, int value);
+
+		virtual void SetGPUProgramParamAsFloat(GPUProgramParam* param, float value);
+
+		virtual void SetGPUProgramParamAsMat4(GPUProgramParam* param, const glm::mat4& mat);
+
+		virtual void SetGPUProgramParamAsIntArray(GPUProgramParam* param, const std::vector<int>& values);
+
+		virtual void SetGPUProgramParamAsFloatArray(GPUProgramParam* param, const std::vector<float>& values);
+
+		virtual void SetGPUProgramParamAsMat4Array(GPUProgramParam* param, const std::vector<glm::mat4>& values);
+
+	public:		
+		virtual void InitThreadGPUProgramParam(ThreadedGPUProgram* program, ThreadedGPUProgramParam* param, const std::string& name);
 		virtual void RunOneThreadCommand();
 	};
 }

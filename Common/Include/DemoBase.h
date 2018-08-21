@@ -2,7 +2,7 @@
 #define DemoBase_H
 #include "ESDevice.hpp"
 #include "esUtil.h"
-
+#include "Camera.hpp"
 class DemoBase
 {
 	RenderEngine::ESDevice* _device;

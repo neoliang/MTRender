@@ -6,45 +6,72 @@
 #include "PlatformSemaphore.h"
 namespace RenderEngine {
 
+	class ThreadESDeviceBase;
+
 	class ThreadedGPUProgram : public GPUProgram
 	{
 		friend class DeleteGPUProgramCMD;
 		friend class ThreadESDevice;
+		friend class ThreadBufferESDevice;
 	public:
+		ThreadESDeviceBase * _threadDevice;
 		GPUProgram * realProgram;
-		ThreadedGPUProgram() :realProgram(NULL) {}
 		GPUProgram* GetRealGUPProgram()
 		{
 			return realProgram;
 		}
+		GPUProgramParam* GetParam(const std::string& name);
+	protected:
 		~ThreadedGPUProgram() {}
+		ThreadedGPUProgram(ThreadESDeviceBase* threadDevice) :_threadDevice(threadDevice), realProgram(NULL) {}
 	};
 
 	class ThreadedTexture2D : public Texture2D
 	{
 		friend class DeleteTexture2DCMD;
 		friend class ThreadESDevice;
+		friend class ThreadBufferESDevice;
 	public:
-		Texture2D * realTexture;
-		ThreadedTexture2D() :realTexture(NULL) {}
+		Texture2D * realTexture;	
 		Texture2D* GetRealTexture2D()
 		{
 			return realTexture;
 		}
+	protected:
 		~ThreadedTexture2D() {}
+		ThreadedTexture2D() :realTexture(NULL) {}
 	};
 
 	class ThreadedVBO : public VBO
 	{
 		friend class ThreadESDevice;
 		friend class DeleteVBOCMD;
+		friend class ThreadBufferESDevice;
 	public:
 		VBO * realVbo;
+	protected:
 		~ThreadedVBO() {}
+		ThreadedVBO() {}
 	public:
 		virtual VBO* GetRealVBO()
 		{
 			return realVbo;
+		}
+	};
+
+	class ThreadedGPUProgramParam : public GPUProgramParam
+	{
+		friend class ThreadESDeviceBase;
+	protected:
+		ThreadedGPUProgramParam() {}
+		~ThreadedGPUProgramParam() {}
+
+	public:
+		GPUProgramParam * realParam;
+
+		virtual GPUProgramParam* GetRealParam()
+		{
+			return realParam;
 		}
 	};
 
@@ -93,6 +120,13 @@ namespace RenderEngine {
 			_thread.join();
 			delete _realDevice;
 		}
+		virtual int GetScreenWidth() { return _realDevice->GetScreenWidth(); }
+		virtual int GetScreenHeigt() { return _realDevice->GetScreenHeigt(); }
+
+		virtual GPUProgramParam* GetGPUProgramParam(GPUProgram* program, const std::string& name);
+
+		virtual void InitThreadGPUProgramParam(ThreadedGPUProgram* program, ThreadedGPUProgramParam* param, const std::string& name) = 0;
+	public:
 		bool IsCreateResInBlockMode()const
 		{
 			return _returnResImmediately;

@@ -10,28 +10,62 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/euler_angles.hpp"
 #include <algorithm>
+#include <map>
 namespace RenderEngine {
 
+	class GPUProgramImp;
+	class GPUProgramParamImp : public GPUProgramParam
+	{
+	public:
+		GLint location;
+	public:
+		GPUProgramParamImp(GLint loc)
+			:location(loc) {}
+
+	public:
+		virtual GPUProgramParam* GetRealParam()
+		{
+			return this;
+		}
+	};
 	class GPUProgramImp : public GPUProgram
 	{
 	public:
 		GLuint ProgramID;
-		GLuint textLoc;
 		GPUProgramImp(GLuint id)
 			:ProgramID(id) {
-			textLoc = glGetUniformLocation(ProgramID, "baseTex");
-			//esLogMessage("textLoc %d",(int)textLoc);
 		}
 		GPUProgram* GetRealGUPProgram()
 		{
 			return this;
 		}
+		virtual GPUProgramParam* GetParam(const std::string& name)
+		{
+			auto const &iter = _nameToParams.find(name);
+			if (iter == _nameToParams.end())
+			{
+				int location = glGetUniformLocation(ProgramID, name.c_str());
+				if (location < 0)
+				{
+					return nullptr;
+				}
+				GPUProgramParamImp *param = new GPUProgramParamImp(location);
+				_nameToParams.insert(iter, std::make_pair(name, param));
+				return param;
+			}
+			return iter->second;
+		}
+	protected:
+		~GPUProgramImp()
+		{
+			for (auto iter = _nameToParams.begin(); iter != _nameToParams.end(); ++iter)
+			{
+				delete iter->second;
+			}
+		}
+	private:
+		std::map<std::string, GPUProgramParamImp *> _nameToParams;
 	};
-	GPUProgram::~GPUProgram()
-	{
-		//esLogMessage("[render]~GPUProgram()");
-	}
-
 
 	class Texture2DImp : public Texture2D
 	{
@@ -46,10 +80,6 @@ namespace RenderEngine {
 		}
 	};
 
-	Texture2D::~Texture2D()
-	{
-		esLogMessage("[render]~Texture2D()");
-	}
 
 
 	bool ESDeviceImp::CreateWindow1(const std::string& title, int width, int height, int flags)
@@ -108,13 +138,11 @@ namespace RenderEngine {
 		}
 		return new GPUProgramImp(programObject);
 	}
-	GLuint _programId;
 	void ESDeviceImp::UseGPUProgram(GPUProgram* program)
 	{
-		_programId = static_cast<GPUProgramImp*>(program)->ProgramID;
+		auto programId = static_cast<GPUProgramImp*>(program)->ProgramID;
 
-		glUseProgram(_programId);
-		glUniform1i(static_cast<GPUProgramImp*>(program)->textLoc, 0);
+		glUseProgram(programId);
 	}
 	void ESDeviceImp::DeletGPUProgram(GPUProgram* program)
 	{
@@ -228,143 +256,53 @@ namespace RenderEngine {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
 		glDrawElements(GL_TRIANGLES, vboImp->elementSize, GL_UNSIGNED_SHORT, (void*)0);
 	}
-	void ESDeviceImp::Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& meshes)
+
+	int ESDeviceImp::GetScreenWidth()
 	{
-		//DrawLine({ glm::vec3(0,0,0),glm::vec3(1,1,0) });
-		const glm::vec3 up(0, 1, 0);
-		auto viewMat = glm::lookAt(camer->position, camer->target, up);
-		GLuint MatrixID = glGetUniformLocation(_programId, "MVP");
-		glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_esContext->width / _esContext->height, 0.1f, 20.0f);
-		for (auto mesh : meshes)
-		{
-			auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
-			auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
-			auto wordlMat = w0 * w1;
-			auto mvp = projMat * viewMat* wordlMat;
-			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
-			this->DrawVBO(mesh->vbo->GetRealVBO());
-			//static const GLfloat g_vertex_buffer_data[] = {
-			//	-1.0f,-1.0f,-1.0f,
-			//	-1.0f,-1.0f, 1.0f,
-			//	-1.0f, 1.0f, 1.0f,
-			//	1.0f, 1.0f,-1.0f,
-			//	-1.0f,-1.0f,-1.0f,
-			//	-1.0f, 1.0f,-1.0f,
-			//	1.0f,-1.0f, 1.0f,
-			//	-1.0f,-1.0f,-1.0f,
-			//	1.0f,-1.0f,-1.0f,
-			//	1.0f, 1.0f,-1.0f,
-			//	1.0f,-1.0f,-1.0f,
-			//	-1.0f,-1.0f,-1.0f,
-			//	-1.0f,-1.0f,-1.0f,
-			//	-1.0f, 1.0f, 1.0f,
-			//	-1.0f, 1.0f,-1.0f,
-			//	1.0f,-1.0f, 1.0f,
-			//	-1.0f,-1.0f, 1.0f,
-			//	-1.0f,-1.0f,-1.0f,
-			//	-1.0f, 1.0f, 1.0f,
-			//	-1.0f,-1.0f, 1.0f,
-			//	1.0f,-1.0f, 1.0f,
-			//	1.0f, 1.0f, 1.0f,
-			//	1.0f,-1.0f,-1.0f,
-			//	1.0f, 1.0f,-1.0f,
-			//	1.0f,-1.0f,-1.0f,
-			//	1.0f, 1.0f, 1.0f,
-			//	1.0f,-1.0f, 1.0f,
-			//	1.0f, 1.0f, 1.0f,
-			//	1.0f, 1.0f,-1.0f,
-			//	-1.0f, 1.0f,-1.0f,
-			//	1.0f, 1.0f, 1.0f,
-			//	-1.0f, 1.0f,-1.0f,
-			//	-1.0f, 1.0f, 1.0f,
-			//	1.0f, 1.0f, 1.0f,
-			//	-1.0f, 1.0f, 1.0f,
-			//	1.0f,-1.0f, 1.0f
-			//};
-
-			//// Two UV coordinatesfor each vertex. They were created with Blender.
-			//static const GLfloat g_uv_buffer_data[] = {
-			//	0.000059f, 1.0f - 0.000004f,
-			//	0.000103f, 1.0f - 0.336048f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	1.000023f, 1.0f - 0.000013f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.999958f, 1.0f - 0.336064f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.336024f, 1.0f - 0.671877f,
-			//	0.667969f, 1.0f - 0.671889f,
-			//	1.000023f, 1.0f - 0.000013f,
-			//	0.668104f, 1.0f - 0.000013f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.000059f, 1.0f - 0.000004f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	0.336098f, 1.0f - 0.000071f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	0.336024f, 1.0f - 0.671877f,
-			//	1.000004f, 1.0f - 0.671847f,
-			//	0.999958f, 1.0f - 0.336064f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.668104f, 1.0f - 0.000013f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	0.667979f, 1.0f - 0.335851f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	0.668104f, 1.0f - 0.000013f,
-			//	0.336098f, 1.0f - 0.000071f,
-			//	0.000103f, 1.0f - 0.336048f,
-			//	0.000004f, 1.0f - 0.671870f,
-			//	0.336024f, 1.0f - 0.671877f,
-			//	0.000103f, 1.0f - 0.336048f,
-			//	0.336024f, 1.0f - 0.671877f,
-			//	0.335973f, 1.0f - 0.335903f,
-			//	0.667969f, 1.0f - 0.671889f,
-			//	1.000004f, 1.0f - 0.671847f,
-			//	0.667979f, 1.0f - 0.335851f
-			//};
-
-			//GLuint vertexbuffer;
-			//glGenBuffers(1, &vertexbuffer);
-			//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-
-			//GLuint uvbuffer;
-			//glGenBuffers(1, &uvbuffer);
-			//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
-
-			//glEnableVertexAttribArray(0);
-			//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-			//glVertexAttribPointer(
-			//	0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
-			//	3,                  // size
-			//	GL_FLOAT,           // type
-			//	GL_FALSE,           // normalized?
-			//	0,                  // stride
-			//	(void*)0            // array buffer offset
-			//);
-
-			//// 2nd attribute buffer : UVs
-			//glEnableVertexAttribArray(1);
-			//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-			//glVertexAttribPointer(
-			//	1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-			//	2,                                // size : U+V => 2
-			//	GL_FLOAT,                         // type
-			//	GL_FALSE,                         // normalized?
-			//	0,                                // stride
-			//	(void*)0                          // array buffer offset
-			//);
-
-			//// Draw the triangle !
-			//glDrawArrays(GL_TRIANGLES, 0, 12 * 3); // 12*3 indices starting at 0 -> 12 triangles
-
-			//glDisableVertexAttribArray(0);
-			//glDisableVertexAttribArray(1);
-			//glDeleteBuffers(1, &vertexbuffer);
-			//glDeleteBuffers(1, &uvbuffer);
-
-		}
+		return _esContext->width;
 	}
+
+	int ESDeviceImp::GetScreenHeigt()
+	{
+		return _esContext->height;
+	}
+
+	RenderEngine::GPUProgramParam* ESDeviceImp::GetGPUProgramParam(GPUProgram* program,const std::string& name)
+	{
+		return program->GetParam(name);
+	}
+
+	void ESDeviceImp::SetGPUProgramParamAsInt(GPUProgramParam * param, int value)
+	{
+		glUniform1i(static_cast<GPUProgramParamImp*>(param)->location, value);
+	}
+
+
+	void ESDeviceImp::SetGPUProgramParamAsFloat(GPUProgramParam* param, float value)
+	{
+		glUniform1f(static_cast<GPUProgramParamImp*>(param)->location, value);
+	}
+
+	void ESDeviceImp::SetGPUProgramParamAsMat4(GPUProgramParam * param, const glm::mat4 & mat)
+	{
+		glUniformMatrix4fv(static_cast<GPUProgramParamImp*>(param)->location, 1, /*transpose=*/GL_FALSE, &mat[0][0]);
+	}
+
+	void ESDeviceImp::SetGPUProgramParamAsIntArray(GPUProgramParam * param, const std::vector<int>& values)
+	{
+		glUniform1iv(static_cast<GPUProgramParamImp*>(param)->location, values.size(), &values[0]);
+	}
+
+	void ESDeviceImp::SetGPUProgramParamAsFloatArray(GPUProgramParam * param,const std::vector<float>& values)
+	{
+		glUniform1fv(static_cast<GPUProgramParamImp*>(param)->location, values.size(), &values[0]);
+	}
+
+	void ESDeviceImp::SetGPUProgramParamAsMat4Array(GPUProgramParam * param, const std::vector<glm::mat4>& values)
+	{
+		glUniformMatrix4fv(static_cast<GPUProgramParamImp*>(param)->location, values.size(), /*transpose=*/GL_FALSE, &values[0][0][0]);
+	}
+
 	void ESDeviceImp::AcqiureThreadOwnerShip()
 	{
 #ifndef __APPLE__

@@ -15,14 +15,15 @@ LOCAL_CFLAGS	+= -DGLM_ENABLE_EXPERIMENTAL
 
 LOCAL_SRC_FILES := $(COMMON_SRC_PATH)/esShader.cpp \
 				   $(COMMON_SRC_PATH)/RingBuffer.cpp \
-				   $(COMMON_PATH)/Mesh.cpp \
+				   $(COMMON_SRC_PATH)/Mesh.cpp \
 				   $(COMMON_SRC_PATH)/esShapes.cpp \
 				   $(COMMON_SRC_PATH)/esTransform.cpp \
 				   $(COMMON_SRC_PATH)/esUtil.cpp \
 				   $(COMMON_SRC_PATH)/Android/esUtil_Android.cpp \
-				   $(COMMON_PATH)/ESDevice.cpp \
+				   $(COMMON_SRC_PATH)/ESDevice.cpp \
 				   $(COMMON_SRC_PATH)/ThreadBufferESDevice.cpp \
-				   $(COMMON_PATH)/ThreadESDevice.cpp \
+				   $(COMMON_SRC_PATH)/ThreadESDeviceBase.cpp \
+				   $(COMMON_SRC_PATH)/ThreadESDevice.cpp \
 				   $(COMMON_SRC_PATH)/DemoBase.cpp \
 				   $(SRC_PATH)/Hello_Triangle.cpp
 				   

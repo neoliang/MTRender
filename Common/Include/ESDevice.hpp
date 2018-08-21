@@ -11,27 +11,35 @@
 #include "esUtil.h"
 #include <string>
 #include "glm/glm.hpp"
-#include "Camera.hpp"
 #include "Mesh.hpp"
-
 
 namespace RenderEngine {
 	class ESDevice;	
 	class ESDeviceImp;
+
+	class GPUProgramParam
+	{
+	protected:
+		virtual ~GPUProgramParam() {}
+	public:
+		virtual GPUProgramParam* GetRealParam() = 0;
+	};
+
 	class GPUProgram
 	{
 		friend class ESDeviceImp;
 	protected:
-		virtual ~GPUProgram();
+		virtual ~GPUProgram() {};
 	public:
 		virtual GPUProgram* GetRealGUPProgram() = 0;
+		virtual GPUProgramParam* GetParam(const std::string& name) = 0;
 	};
 
 	class Texture2D
 	{
 		friend class ESDeviceImp;
 	protected:
-		virtual ~Texture2D();
+		virtual ~Texture2D() {};
 	public:
 		virtual Texture2D* GetRealTexture2D() = 0;
 	};
@@ -41,9 +49,7 @@ namespace RenderEngine {
 		virtual ~ESDevice() {};
 		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags) = 0;
 		virtual void Clear() = 0;
-		virtual void UseGPUProgram(GPUProgram* program) = 0;
-		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader) = 0;
-		virtual void DeletGPUProgram(GPUProgram* program) = 0;
+
 		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen) = 0;
 		virtual void DeleteTexture2D(Texture2D* texture) = 0;
 		virtual void UseTexture2D(Texture2D* texture) = 0;		
@@ -54,13 +60,30 @@ namespace RenderEngine {
 		virtual void ReleaseThreadOwnership() =0;
 		virtual void BeginRender() = 0;
 		virtual void Present() = 0;
-		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh) = 0;
 		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
 			std::vector<glm::vec2> uvs,
 			std::vector<unsigned short> indices)=0;
 		virtual void DeleteVBO(VBO* vbo) = 0;
 		virtual void DrawVBO(VBO* vbo) = 0;
 		virtual void Cleanup() = 0;
+
+		virtual void UseGPUProgram(GPUProgram* program) = 0;
+		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader) = 0;
+		virtual void DeletGPUProgram(GPUProgram* program) = 0;
+		virtual GPUProgramParam* GetGPUProgramParam(GPUProgram* program, const std::string& name) = 0;
+		virtual void SetGPUProgramParamAsInt(GPUProgramParam* param, int value) = 0;
+
+		virtual void SetGPUProgramParamAsFloat(GPUProgramParam* param, float value) = 0;
+
+		virtual void SetGPUProgramParamAsMat4(GPUProgramParam* param, const glm::mat4& mat) = 0;
+
+		virtual void SetGPUProgramParamAsIntArray(GPUProgramParam* param, const std::vector<int>& values) = 0;
+
+		virtual void SetGPUProgramParamAsFloatArray(GPUProgramParam* param, const std::vector<float>& values) = 0;
+
+		virtual void SetGPUProgramParamAsMat4Array(GPUProgramParam* param,  const std::vector<glm::mat4>& values) = 0;
+		virtual int GetScreenWidth() = 0;
+		virtual int GetScreenHeigt() = 0;
 	};
 
 	class ESDeviceImp : public ESDevice
@@ -77,9 +100,7 @@ namespace RenderEngine {
 		virtual void Cleanup() {}
 		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags);
 		virtual void Clear();
-		virtual void UseGPUProgram(GPUProgram* program);
-		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader);
-		virtual void DeletGPUProgram(GPUProgram* program);
+
 		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen);
 		virtual void DeleteTexture2D(Texture2D* texture);
 		virtual void UseTexture2D(Texture2D* texture);
@@ -93,12 +114,33 @@ namespace RenderEngine {
 		virtual void Draw2DPoint(const glm::vec2& pos);
 		virtual void DrawLine(const std::vector<glm::vec3>& line);
 		virtual glm::vec3 Project(const glm::vec3& coord, const glm::mat4& transMat);
-		virtual void Render(Camera::Ptr camer, const std::vector<Mesh::Ptr>& mesh);
 		virtual VBO* CreateVBO(std::vector<glm::vec3> vertices,
 			std::vector<glm::vec2> uvs,
 			std::vector<unsigned short> indices);
 		virtual void DeleteVBO(VBO* vbo);
 		virtual void DrawVBO(VBO* vbo);
+		virtual int GetScreenWidth();
+		virtual int GetScreenHeigt();
+		//gpu program
+		virtual void UseGPUProgram(GPUProgram* program);
+
+		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader);
+
+		virtual void DeletGPUProgram(GPUProgram* program);
+
+		virtual GPUProgramParam* GetGPUProgramParam(GPUProgram* program, const std::string& name);
+
+		virtual void SetGPUProgramParamAsInt(GPUProgramParam* param, int value);
+
+		virtual void SetGPUProgramParamAsFloat(GPUProgramParam* param, float value);
+
+		virtual void SetGPUProgramParamAsMat4(GPUProgramParam* param, const glm::mat4& mat);
+
+		virtual void SetGPUProgramParamAsIntArray(GPUProgramParam* param, const std::vector<int>& values);
+
+		virtual void SetGPUProgramParamAsFloatArray(GPUProgramParam* param,  const std::vector<float>& values);
+
+		virtual void SetGPUProgramParamAsMat4Array(GPUProgramParam* param, const std::vector<glm::mat4>& values);
 	};
 }
 #endif /* ESDevice_hpp */

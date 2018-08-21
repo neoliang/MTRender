@@ -52,7 +52,6 @@
 #endif
 #ifdef __cplusplus
 
-extern "C" {
 #endif
 
 
@@ -343,7 +342,6 @@ esMatrixLookAt ( ESMatrix *result,
                  float upX,     float upY,     float upZ );
 
 #ifdef __cplusplus
-}
 #endif
 
 #endif // ESUTIL_H

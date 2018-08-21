@@ -2,6 +2,7 @@
 #include "esUtil.h"
 #include "ESDevice.hpp"
 #include "ThreadESDevice.hpp"
+#include "ThreadBufferESDevice.h"
 #include <cmath>
 #include <thread>
 #include <iostream>
@@ -118,7 +119,7 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 #else
 	if (_multiThreaded)
 	{
-		_device = new ThreadESDevice(esContext, _returnResImmediately);
+		_device = new ThreadBufferESDevice(esContext, _returnResImmediately);
 	}
 	else
 	{
@@ -136,7 +137,7 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 	else
 	{
 #ifndef __APPLE__
-		((ThreadESDevice*)_device)->Run();
+		((ThreadBufferESDevice*)_device)->Run();
 #endif
 	}
 	_device->SetClearColor(0.0f, 0.0f, 0.6f, 0.0f);
@@ -215,10 +216,19 @@ void DemoBase::Render()
 	float avgTime = s_createShaderAccTime / s_createShaderAccCount;
 	//esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
 	_device->UseGPUProgram(_program);
-	//_device->DeletGPUProgram(program);
-	//for (int i = 0; i < 40; ++i)
+
+	const glm::vec3 up(0, 1, 0);
+	auto viewMat = glm::lookAt(_camera->position, _camera->target, up);
+	auto mvpParam = _program->GetParam("MVP");
+	glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_device->GetScreenWidth() / _device->GetScreenHeigt(), 0.1f, 20.0f);
+	for (auto mesh : _meshes)
 	{
-		_device->Render(_camera, _meshes);
+		auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
+		auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
+		auto wordlMat = w0 * w1;
+		auto mvp = projMat * viewMat* wordlMat;
+		_device->SetGPUProgramParamAsMat4(mvpParam, mvp);
+		_device->DrawVBO(mesh->vbo);
 	}
 	_device->Present();
 }
