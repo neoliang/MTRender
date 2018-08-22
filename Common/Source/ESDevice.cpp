@@ -80,6 +80,19 @@ namespace RenderEngine {
 		}
 	};
 
+	class VBOImp : public VBO
+	{
+		friend class ESDeviceImp;
+	public:
+		GLuint vertexArrayID;
+		GLuint vertexbuffer;
+		GLuint uvbuffer;
+		GLuint elementbuffer;
+		GLuint elementSize;
+	protected:
+		~VBOImp() {}
+		virtual VBO* GetRealVBO() { return this; }
+	};
 
 
 	bool ESDeviceImp::CreateWindow1(const std::string& title, int width, int height, int flags)
@@ -149,15 +162,14 @@ namespace RenderEngine {
 		glDeleteProgram(static_cast<GPUProgramImp*>(program)->ProgramID);
 		delete program;
 	}
-	Texture2D* ESDeviceImp::CreateTexture2D(int width, int height, const void* data,int dataLen)
+	Texture2D* ESDeviceImp::CreateTexture2D(const TextureData::Ptr& data)
 	{
 		GLuint textureID = 0;
 		glActiveTexture(GL_TEXTURE0);
 		glGenTextures(1, &textureID);
 		glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data->width, data->height, 0, GL_RGB, GL_UNSIGNED_BYTE, data->pixels);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		esLogMessage("textureID %d", (int)textureID);
 		return new Texture2DImp(textureID);
 	}
 	void ESDeviceImp::DeleteTexture2D(Texture2D* texture)
@@ -220,21 +232,21 @@ namespace RenderEngine {
 		glGenBuffers(1, &vbo->elementbuffer);
 		return vbo;
 	}
-	void ESDeviceImp::UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	void ESDeviceImp::UpdateVBO(VBO* vbo, const VBOData::Ptr& vboData)
 	{
 		auto vboImp = (VBOImp*) vbo;
 
 
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->vertexbuffer);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vboData->vertices.size() * sizeof(glm::vec3), &vboData->vertices[0], GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->uvbuffer);
-		glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vboData->uvs.size() * sizeof(glm::vec2), &vboData->uvs[0], GL_STATIC_DRAW);
 
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
-		vboImp->elementSize = indices.size();
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData->indices.size() * sizeof(unsigned short), &vboData->indices[0], GL_STATIC_DRAW);
+		vboImp->elementSize = vboData->indices.size();
 	}
 	void ESDeviceImp::DeleteVBO(VBO* vbo)
 	{

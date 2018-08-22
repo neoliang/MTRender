@@ -119,16 +119,14 @@ namespace RenderEngine {
 	class UpdateVBOCMD : public ThreadDeviceCommand
 	{
 	private:
-		std::vector<glm::vec3> _vertices;
-		std::vector<glm::vec2> _uvs; 
-		std::vector<unsigned short> _indices;
+		VBOData::Ptr _vboData;
 		ThreadedVBO * _vbo;
 	public:
-		UpdateVBOCMD(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec2>& uvs, const std::vector<unsigned short>& indices, ThreadedVBO *vbo)
-			:_vertices(vertices), _uvs(uvs), _indices(indices), _vbo(vbo) {}
+		UpdateVBOCMD(const VBOData::Ptr& vboData, ThreadedVBO *vbo)
+			:_vboData(vboData), _vbo(vbo) {}
 		void Execute(ESDevice* device)
 		{
-			device->UpdateVBO(_vbo->realVbo,_vertices, _uvs, _indices);
+			device->UpdateVBO(_vbo->realVbo, _vboData);
 		}
 	};
 	class CreateVBOCMD : public ThreadDeviceCommand
@@ -178,19 +176,16 @@ namespace RenderEngine {
 	class CreateTexture2DCMD : public ThreadDeviceCommand
 	{
 	private:
-		int _width;
-		int _height;
-		int _dataLen;
-		const void* _data;
+		TextureData::Ptr _data;
 		ThreadedTexture2D* _texture;
 	public:
-		CreateTexture2DCMD(int width, int height, const void* data, ThreadedTexture2D* tex,int dataLen)
-			:_width(width), _height(height), _data(data),_texture(tex)
+		CreateTexture2DCMD(const TextureData::Ptr& data,ThreadedTexture2D* tex)
+			: _data(data),_texture(tex)
 		{
 		}
 		void Execute(ESDevice* device)
 		{
-			_texture->realTexture = device->CreateTexture2D(_width, _height, _data, _dataLen);
+			_texture->realTexture = device->CreateTexture2D(_data);
 		}
 		void OnExecuteEnd(ThreadESDevice* threadDevice)
 		{
@@ -477,16 +472,16 @@ namespace RenderEngine {
 		}
 		return vbo;
 	}
-	void ThreadESDevice::UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	void ThreadESDevice::UpdateVBO(VBO* vbo, const VBOData::Ptr& vboData)
 	{
 		ThreadedVBO* threadVbo = static_cast<ThreadedVBO*>(vbo);
 		if (!_threaded)
 		{
-			_realDevice->UpdateVBO(threadVbo->realVbo,vertices, uvs,indices);
+			_realDevice->UpdateVBO(threadVbo->realVbo,vboData);
 		}
 		else
 		{
-			UpdateVBOCMD* cmd = new UpdateVBOCMD(vertices,uvs,indices, threadVbo);
+			UpdateVBOCMD* cmd = new UpdateVBOCMD(vboData, threadVbo);
 			_commandQueue.push(cmd);
 
 		}
@@ -674,16 +669,16 @@ namespace RenderEngine {
 		}
 	}
 
-	Texture2D* ThreadESDevice::CreateTexture2D(int width, int height, const void* data, int dataLen)
+	Texture2D* ThreadESDevice::CreateTexture2D(const TextureData::Ptr& data)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
 		if (!_threaded)
 		{
-			texture->realTexture = _realDevice->CreateTexture2D(width, height, data,dataLen);
+			texture->realTexture = _realDevice->CreateTexture2D(data);
 		}
 		else
 		{
-			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(width, height, data, texture,dataLen);
+			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(data,texture);
 			AUTOLOCK
 				_commandQueue.push(cmd);
 			if (_returnResImmediately)

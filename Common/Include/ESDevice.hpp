@@ -44,13 +44,38 @@ namespace RenderEngine {
 		virtual Texture2D* GetRealTexture2D() = 0;
 	};
 
+	struct TextureData
+	{
+		char* pixels;
+		unsigned int length;
+		unsigned int width;
+		unsigned int height;
+		//TO DO format desc
+
+		TextureData()
+			:pixels(nullptr),length(0),width(0),height(0)
+		{
+
+		}
+		TextureData(char* pixels_, unsigned int width_, unsigned int height_, unsigned int lenght_)
+			:pixels(pixels_), width(width_), height(height_), length(lenght_) {}
+		~TextureData()
+		{
+			delete[] pixels;
+		}
+		typedef std::shared_ptr<TextureData> Ptr;
+	private:
+		TextureData(TextureData&);
+		const TextureData& operator=(const TextureData&);
+	};
+
 	class ESDevice {
 	public:
 		virtual ~ESDevice() {};
 		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags) = 0;
 		virtual void Clear() = 0;
 
-		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen) = 0;
+		virtual Texture2D* CreateTexture2D(const TextureData::Ptr& data) = 0;
 		virtual void DeleteTexture2D(Texture2D* texture) = 0;
 		virtual void UseTexture2D(Texture2D* texture) = 0;		
 		virtual void SetClearColor(float r, float g, float b, float alpha) = 0;
@@ -61,9 +86,7 @@ namespace RenderEngine {
 		virtual void BeginRender() = 0;
 		virtual void Present() = 0;
 		virtual VBO* CreateVBO()=0;
-		virtual void UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices,
-			std::vector<glm::vec2> uvs,
-			std::vector<unsigned short> indices)=0;
+		virtual void UpdateVBO(VBO* vbo,const VBOData::Ptr& vboData)=0;
 		virtual void DeleteVBO(VBO* vbo) = 0;
 		virtual void DrawVBO(VBO* vbo) = 0;
 		virtual void Cleanup() = 0;
@@ -102,7 +125,7 @@ namespace RenderEngine {
 		virtual bool CreateWindow1(const std::string& title, int width, int height, int flags);
 		virtual void Clear();
 
-		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen);
+		virtual Texture2D* CreateTexture2D(const TextureData::Ptr& data);
 		virtual void DeleteTexture2D(Texture2D* texture);
 		virtual void UseTexture2D(Texture2D* texture);
 		virtual void SetClearColor(float r, float g, float b, float alpha);
@@ -116,9 +139,7 @@ namespace RenderEngine {
 		virtual void DrawLine(const std::vector<glm::vec3>& line);
 		virtual glm::vec3 Project(const glm::vec3& coord, const glm::mat4& transMat);
 		virtual VBO* CreateVBO();
-		virtual void UpdateVBO(VBO* vbo,std::vector<glm::vec3> vertices,
-			std::vector<glm::vec2> uvs,
-			std::vector<unsigned short> indices);
+		virtual void UpdateVBO(VBO* vbo, const VBOData::Ptr& vboData);
 		virtual void DeleteVBO(VBO* vbo);
 		virtual void DrawVBO(VBO* vbo);
 		virtual int GetScreenWidth();

@@ -59,59 +59,25 @@ DemoBase* DemoBase::Instnce()
 	}
 	return gs_demo;
 }
-#include "RingBuffer.h"
+
+VBOData::Ptr _vboData = std::make_shared<VBOData>();
 void DemoBase::Init()
 {
-	//≤‚ ‘ringbuffer
-	auto fileContent = readFileData("monkey.babylon");
-	RingBuffer* buffer = new RingBuffer(4096);
-	std::thread s1 = std::thread([&]() {
-		for (int i = 0; i < 10000; ++i)
-		{
-			auto v = buffer->ReadValueType<int>();
-			buffer->ReadReleaseData();
-			if (i >= 9999)
-			{
-				esLogMessage("ringbuffer v %d", v);
-			}
-		}
-		char* buff = new char[fileContent.size()+1];
-		
-		buffer->ReadStreamingData(buff, fileContent.size());
-		buff[fileContent.size()] = '\0';
-		std::string newString(buff);
-		if (newString == fileContent)
-		{
-			esLogMessage("readstreaming data equal");
-		}
-		else
-		{
-			esLogMessage("readstreaming data not equal");
-		}
-	});
-	for (int i = 0; i < 10000; ++i)
-	{
-		buffer->WriteValueType(i);
-		buffer->WriteSubmitData();
-	}
-	
-	buffer->WriteStreamingData(fileContent.c_str(), fileContent.size());
-	s1.join();
-	delete buffer;
-
 	_meshes = Mesh::LoadMeshFromFile("monkey.babylon");
-	auto tM = _meshes[0];
+	_vboData->vertices = _meshes[0]->vboData->vertices;
+	_vboData->uvs = _meshes[0]->vboData->uvs;
+	_vboData->indices = _meshes[0]->vboData->indices;
 	for (int i = 0; i < 40; ++i)
 	{
-		auto m = std::make_shared<Mesh>("cube", tM->vertices.size(), tM->indices.size());
-		m->position = glm::vec3((rand() % 1000)/100.0f-5, (rand() % 1000)/100.0f-5, (rand() % 1000)/100.0f - 5);
-		_meshes.push_back(m);
+		_vboData->vertices.insert(_vboData->vertices.end(), _meshes[0]->vboData->vertices.begin(),_meshes[0]->vboData->vertices.end());
+		_vboData->uvs.insert(_vboData->uvs.end(), _meshes[0]->vboData->uvs.begin(), _meshes[0]->vboData->uvs.end());
+		_vboData->indices.insert(_vboData->indices.end(), _meshes[0]->vboData->indices.begin(), _meshes[0]->vboData->indices.end());
 	}
 	_camera = Camera::Ptr(new Camera);
 	_camera->position = vec3(0, 0, 12.0f);
 	_camera->target = vec3(0, 0, 0);
 }
-
+TextureData::Ptr g_textureData;
 void DemoBase::OnCreateDevice(ESContext *esContext)
 {
 #ifdef __APPLE__
@@ -150,20 +116,23 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 	_device->SetClearColor(0.0f, 0.0f, 0.6f, 0.0f);
 	int width,dataLen,
 		height;
-	char *buffer = esLoadTGA(esContext->platformData, "basemap.tga", &width, &height,&dataLen);
-	_texture = _device->CreateTexture2D(width, height, buffer,dataLen);
+	char *buffer = esLoadTGA(esContext->platformData, "splash04.tga", &width, &height,&dataLen);
+	g_textureData  = std::make_shared<TextureData>(buffer, width, height, dataLen);
 	_program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
 	for (auto mesh : _meshes)
 	{
 		mesh->vbo = _device->CreateVBO();
-		_device->UpdateVBO(mesh->vbo, _meshes[0]->vertices, _meshes[0]->uvs, _meshes[0]->indices);
+		_device->UpdateVBO(mesh->vbo, _vboData);
 	}
 }
 
 void DemoBase::OnDestroyDevice()
 {
 	_device->DeletGPUProgram(_program);
-	_device->DeleteTexture2D(_texture);
+	if (_texture != nullptr)
+	{
+		_device->DeleteTexture2D(_texture);
+	}	
 	for (auto mesh : _meshes)
 	{
 		_device->DeleteVBO(mesh->vbo);
@@ -186,8 +155,10 @@ void SimulateBusy()
 		g_mat = w0*w1;
 	}
 }
+float _rotaion = 0 ;
 void DemoBase::Update(float dt)
 {
+	_rotaion += dt * M_PI / 2.0f;
 	//BeginProfile("SimulateBusy");
 	SimulateBusy();
 	//EndProfile();
@@ -197,14 +168,14 @@ void DemoBase::Update(float dt)
 	float newFPs = 1.0f / dt;
 	float delta = newFPs - g_fps;
 	g_fps = newFPs;
-	if (g_accCount > 1000)
+	for (int i = 0; i < _meshes[0]->vboData->vertices.size(); ++i)
 	{
-		g_accCount = 0;
-		g_accTime = 0;
+		_meshes[0]->vboData->vertices[i].x = sinf(_rotaion) * _vboData->vertices[i].x;
+		_meshes[0]->vboData->vertices[i].y = cosf(_rotaion) * _vboData->vertices[i].y;
 	}
 	for (auto mesh : _meshes)
 	{
-		mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
+		//mesh->rotation = vec3(mesh->rotation.x + dt * 0.5f, mesh->rotation.y + dt * 0.2f, mesh->rotation.z);
 	}
 	if (g_accCount % 200 == 0)
 	{
@@ -222,7 +193,7 @@ void DemoBase::Render()
 	_device->BeginRender();
 
 	_device->Clear();
-	_device->UseTexture2D(_texture);
+
 	//BeginProfile("device.CreateGPUProgram");
 	float createShaderTime = TimeSinceStartup();
 	//auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
@@ -232,20 +203,24 @@ void DemoBase::Render()
 	float avgTime = s_createShaderAccTime / s_createShaderAccCount;
 	//esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
 	_device->UseGPUProgram(_program);
-
+	_texture = _device->CreateTexture2D(g_textureData);
+	_device->UseTexture2D(_texture);
 	const glm::vec3 up(0, 1, 0);
 	auto viewMat = glm::lookAt(_camera->position, _camera->target, up);
 	auto mvpParam = _program->GetParam("MVP");
 	glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_device->GetScreenWidth() / _device->GetScreenHeigt(), 0.1f, 20.0f);
-	for (auto mesh : _meshes)
-	{
-		auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
-		auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
-		auto wordlMat = w0 * w1;
-		auto mvp = projMat * viewMat* wordlMat;
-		_device->SetGPUProgramParamAsMat4(mvpParam, mvp);
-		_device->DrawVBO(mesh->vbo);
-	}
+	auto mesh = _meshes[0];
+
+	auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
+	auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
+	auto wordlMat = w0 * w1;
+	auto mvp = projMat * viewMat* wordlMat;
+	_device->SetGPUProgramParamAsMat4(mvpParam, mvp);
+	//_device->UpdateVBO(mesh->vbo, _vboData);
+	_device->DrawVBO(mesh->vbo);
+
+	_device->DeleteTexture2D(_texture);
+	_texture = nullptr;
 	_device->Present();
 }
 

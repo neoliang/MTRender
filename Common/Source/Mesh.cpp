@@ -45,19 +45,19 @@ std::vector<Mesh::Ptr> Mesh::LoadMeshFromFile(const std::string & file)
 			float x = verticesArray[index * verticesStep].GetFloat();
 			float y = verticesArray[index * verticesStep + 1].GetFloat();
 			float z = -verticesArray[index * verticesStep + 2].GetFloat();
-			mesh->vertices[index] = glm::vec3(x, y, z);
+			mesh->vboData->vertices[index] = glm::vec3(x, y, z);
 			if (uvCount > 0)
 			{
 				float u = verticesArray[index * verticesStep + 6].GetFloat();
 				float v = verticesArray[index * verticesStep + 7].GetFloat();
-				mesh->uvs[index] = glm::vec2(u, v);
+				mesh->vboData->uvs[index] = glm::vec2(u, v);
 			}
 		}
 
 		// Then filling the Faces array
 		for (unsigned index = 0; index < indicesArray.Size(); index++)
 		{
-			mesh->indices[index] = indicesArray[index].GetInt();
+			mesh->vboData->indices[index] = indicesArray[index].GetInt();
 		}
 
 		// Getting the position you've set in Blender

@@ -16,19 +16,15 @@ namespace RenderEngine {
 		virtual VBO* GetRealVBO() = 0;
 
 	};
-	class ESDeviceImp;
-	class VBOImp : public VBO
+
+	struct VBOData
 	{
-		friend class ESDeviceImp;
-	public:
-		GLuint vertexArrayID;
-		GLuint vertexbuffer;
-		GLuint uvbuffer;
-		GLuint elementbuffer;
-		GLuint elementSize;
-	protected:
-		~VBOImp() {}
-		virtual VBO* GetRealVBO() { return this; }
+		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec2> uvs;
+		std::vector<unsigned short> indices;
+		typedef std::shared_ptr<VBOData> Ptr;
+
+
 	};
 
 	class Mesh
@@ -40,18 +36,18 @@ namespace RenderEngine {
 		static std::vector <Ptr> LoadMeshFromFile(const std::string& file);
 	public:
 		std::string name;
-		std::vector<glm::vec3> vertices;
-		std::vector<glm::vec2> uvs;
-		std::vector<unsigned short> indices;
+		std::shared_ptr<VBOData> vboData;
+
 		glm::vec3 position;
 		glm::vec3 rotation;
 		VBO* vbo;
 		Mesh(const std::string& name_, int vericesCount, int indicesCount = 0)
 			:name(name_), position(0, 0, 0), rotation(0, 0, 0)
 		{
-			vertices.resize(vericesCount);
-			uvs.resize(vericesCount);
-			indices.resize(indicesCount);
+			vboData = std::make_shared<VBOData>();
+			vboData->vertices.resize(vericesCount);
+			vboData->uvs.resize(vericesCount);
+			vboData->indices.resize(indicesCount);
 		}
 		~Mesh()
 		{

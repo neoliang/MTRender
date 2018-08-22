@@ -439,7 +439,7 @@ char *ESUTIL_API esLoadTGA ( void *ioContext, const char *fileName, int *width, 
       if ( buffer )
       {
          bytesRead = esFileRead ( fp, bytesToRead, buffer );
-		 *dataLen = bytesRead;
+		 *dataLen = bytesToRead;
          esFileClose ( fp );
 
          return ( buffer );

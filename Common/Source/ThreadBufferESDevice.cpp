@@ -102,25 +102,28 @@ namespace RenderEngine
 	struct GfxCmdCreateTextureData
 	{
 		ThreadedTexture2D* texture;
-		int width;
-		int height;
-		int dataLen;
+		unsigned int width;
+		unsigned int height;
+		unsigned int dataLen;
 	};
-	Texture2D* ThreadBufferESDevice::CreateTexture2D(int width, int height, const void* data, int dataLen)
+	Texture2D* ThreadBufferESDevice::CreateTexture2D(const TextureData::Ptr& data)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
 		if (!_threaded)
 		{
-			texture->realTexture = _realDevice->CreateTexture2D(width, height, data,dataLen);
+			texture->realTexture = _realDevice->CreateTexture2D(data);
 		}
 		else
 		{
 			GfxCmdCreateTextureData cmddata{
-				texture,width,height,dataLen
+				texture,data->width,data->height,data->length
 			};
 			_commandBuffer->WriteValueType(kGfxCmd_CreateTexture2D);
 			_commandBuffer->WriteValueType(cmddata);
-			_commandBuffer->WriteStreamingData(data, dataLen);
+			//BeginProfile("kGfxCmd_CreateTexture2D write");
+			_commandBuffer->WriteStreamingData(data->pixels, data->length);
+			//EndProfile();
+
 		}
 		return texture;
 	}
@@ -275,22 +278,24 @@ namespace RenderEngine
 		}
 		return threadvbo;
 	}
-	void ThreadBufferESDevice::UpdateVBO(VBO* vbo, std::vector<glm::vec3> vertices, std::vector<glm::vec2> uvs, std::vector<unsigned short> indices)
+	void ThreadBufferESDevice::UpdateVBO(VBO* vbo, const VBOData::Ptr& vboData)
 	{
 		if (!_threaded)
 		{
-			_realDevice->UpdateVBO(vbo,vertices, uvs, indices);
+			_realDevice->UpdateVBO(vbo,vboData);
 		}
 		else
 		{
 			_commandBuffer->WriteValueType(kGfxCmd_UpdateVBO);
 			GfxCmdUpdateVBOData data{
-				(ThreadedVBO*)vbo,vertices.size(),indices.size()
+				(ThreadedVBO*)vbo,vboData->vertices.size(),vboData->indices.size()
 			};
 			_commandBuffer->WriteValueType(data);
-			_commandBuffer->WriteStreamingData(&vertices[0],data.verticesCount*sizeof(glm::vec3));
-			_commandBuffer->WriteStreamingData(&uvs[0],data.verticesCount*sizeof(glm::vec2));
-			_commandBuffer->WriteStreamingData(&indices[0],data.indicesCount*sizeof(unsigned short));
+			//BeginProfile("kGfxCmd_UpdateVBO write");
+			_commandBuffer->WriteStreamingData(&vboData->vertices[0],data.verticesCount*sizeof(glm::vec3));
+			_commandBuffer->WriteStreamingData(&vboData->uvs[0],data.verticesCount*sizeof(glm::vec2));
+			_commandBuffer->WriteStreamingData(&vboData->indices[0],data.indicesCount*sizeof(unsigned short));
+			//EndProfile();
 		}
 	}
 
@@ -440,7 +445,7 @@ namespace RenderEngine
 			_commandBuffer->WriteStreamingData(&name[0], size);
 		}
 	}
-
+	
 	void ThreadBufferESDevice::RunOneThreadCommand()
 	{
 		GfxCommandType cmd = _commandBuffer->ReadValueType<GfxCommandType>();
@@ -482,10 +487,14 @@ namespace RenderEngine
 		case RenderEngine::kGfxCmd_CreateTexture2D:
 		{	
 			auto data = _commandBuffer->ReadValueType<GfxCmdCreateTextureData>();
+			
 			char *buff = new char[data.dataLen];
+			//BeginProfile("kGfxCmd_CreateTexture2D read");
 			_commandBuffer->ReadStreamingData(buff, data.dataLen);
-			data.texture->realTexture = _realDevice->CreateTexture2D(data.width, data.height, buff, data.dataLen);
-			delete[] buff;
+			//EndProfile();
+			TextureData::Ptr textureData = std::make_shared<TextureData>(buff,data.width,data.height,data.dataLen);
+			data.texture->realTexture = _realDevice->CreateTexture2D(textureData);
+			textureData.reset();
 			break; 
 		}
 		case RenderEngine::kGfxCmd_DeleteTexture2D:
@@ -560,16 +569,19 @@ namespace RenderEngine
 		case RenderEngine::kGfxCmd_UpdateVBO:
 		{	
 			GfxCmdUpdateVBOData data = _commandBuffer->ReadValueType<GfxCmdUpdateVBOData>();
-			std::vector<glm::vec3> vertices;
-			std::vector<glm::vec2> uvs;
-			std::vector<unsigned short> indices;
-			vertices.resize(data.verticesCount);
-			uvs.resize(data.verticesCount);
-			indices.resize(data.indicesCount);
-			_commandBuffer->ReadStreamingData((void*)&vertices[0], data.verticesCount * sizeof(glm::vec3));
-			_commandBuffer->ReadStreamingData((void*)&uvs[0], data.verticesCount * sizeof(glm::vec2));
-			_commandBuffer->ReadStreamingData((void*)&indices[0], data.indicesCount * sizeof(unsigned short));
-			_realDevice->UpdateVBO(data.vbo->realVbo, vertices, uvs, indices);
+			VBOData::Ptr vboData = std::make_shared<VBOData>();
+			//BeginProfile("kGfxCmd_UpdateVBO alloc");
+			vboData->vertices.resize(data.verticesCount);
+			vboData->uvs.resize(data.verticesCount);
+			vboData->indices.resize(data.indicesCount);
+			//EndProfile();
+			//BeginProfile("kGfxCmd_UpdateVBO read");
+			_commandBuffer->ReadStreamingData((void*)&vboData->vertices[0], data.verticesCount * sizeof(glm::vec3));
+			_commandBuffer->ReadStreamingData((void*)&vboData->uvs[0], data.verticesCount * sizeof(glm::vec2));
+			_commandBuffer->ReadStreamingData((void*)&vboData->indices[0], data.indicesCount * sizeof(unsigned short));
+			//EndProfile();
+			_realDevice->UpdateVBO(data.vbo->realVbo, vboData);
+			vboData.reset();
 			break;
 		}
 		case RenderEngine::kGfxCmd_DeleteVBO:

@@ -22,7 +22,7 @@ namespace RenderEngine {
 		virtual void UseGPUProgram(GPUProgram* program);
 		virtual GPUProgram* CreateGPUProgram(const std::string& vertexShader, const std::string& fragmentShader);
 		virtual void DeletGPUProgram(GPUProgram* program);
-		virtual Texture2D* CreateTexture2D(int width, int height, const void* data, int dataLen);
+		virtual Texture2D* CreateTexture2D(const TextureData::Ptr& data);
 		virtual void DeleteTexture2D(Texture2D* texture);
 		virtual void UseTexture2D(Texture2D* texture);
 		virtual void SetClearColor(float r, float g, float b, float alpha);
@@ -33,9 +33,7 @@ namespace RenderEngine {
 		virtual void AcqiureThreadOwnerShip();
 		virtual void ReleaseThreadOwnership();
 		virtual VBO* CreateVBO();
-		virtual void UpdateVBO(VBO* vbo, std::vector<glm::vec3> vertices,
-			std::vector<glm::vec2> uvs,
-			std::vector<unsigned short> indices);
+		virtual void UpdateVBO(VBO* vbo, const VBOData::Ptr& vboData);
 		virtual void DeleteVBO(VBO* vbo);
 		virtual void DrawVBO(VBO* vbo);
 
