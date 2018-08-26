@@ -213,6 +213,7 @@ void DemoBase::Update(float dt)
 void DemoBase::Render()
 {
 	_device->Clear();
+	_device->UpdateVBO(_vbo,_vboData);
 	_device->DrawVBO(_vbo);
 	_device->Present();
 }

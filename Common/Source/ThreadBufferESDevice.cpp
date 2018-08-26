@@ -558,14 +558,14 @@ namespace RenderEngine
 		{	
 			GfxCmdUpdateVBOData data = _commandBuffer->ReadValueType<GfxCmdUpdateVBOData>();
 			VBOData::Ptr vboData = std::make_shared<VBOData>();
-			//BeginProfile("kGfxCmd_UpdateVBO alloc");
+			BeginProfile("kGfxCmd_UpdateVBO alloc");
 			vboData->vertices.resize(data.verticesCount);
 			vboData->indices.resize(data.indicesCount);
-			//EndProfile();
-			//BeginProfile("kGfxCmd_UpdateVBO read");
+			EndProfile();
+			BeginProfile("kGfxCmd_UpdateVBO read");
 			_commandBuffer->ReadStreamingData((void*)&vboData->vertices[0], data.verticesCount * sizeof(VBOData::Vertex));
 			_commandBuffer->ReadStreamingData((void*)&vboData->indices[0], data.indicesCount * sizeof(unsigned short));
-			//EndProfile();
+			EndProfile();
 			_realDevice->UpdateVBO(data.vbo->realVbo, vboData);
 			vboData.reset();
 			break;
