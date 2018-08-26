@@ -16,7 +16,7 @@ using namespace  glm;
 const float M_PI = 3.1415926f;
 #endif
 
-const std::string vShaderStr =
+const std::string vStr =
 "#version 300 es                          \n"
 "layout(location = 0) in vec4 vPosition;  \n"
 "layout(location = 1) in vec2 a_texCoord; \n"
@@ -28,7 +28,7 @@ const std::string vShaderStr =
 "   v_texCoord = a_texCoord;              \n"
 "}                                        \n";
 
-const std::string fShaderStr =
+const std::string fStr =
 "#version 300 es                              \n"
 "precision mediump float;                     \n"
 "in vec2 v_texCoord;                          \n"
@@ -61,16 +61,16 @@ DemoBase* DemoBase::Instnce()
 }
 
 VBOData::Ptr _vboData = std::make_shared<VBOData>();
+glm::mat4 _mvp;
+VBO* _vbo;
 void DemoBase::Init()
 {
 	_meshes = Mesh::LoadMeshFromFile("monkey.babylon");
 	_vboData->vertices = _meshes[0]->vboData->vertices;
-	_vboData->uvs = _meshes[0]->vboData->uvs;
 	_vboData->indices = _meshes[0]->vboData->indices;
 	for (int i = 0; i < 40; ++i)
 	{
 		_vboData->vertices.insert(_vboData->vertices.end(), _meshes[0]->vboData->vertices.begin(),_meshes[0]->vboData->vertices.end());
-		_vboData->uvs.insert(_vboData->uvs.end(), _meshes[0]->vboData->uvs.begin(), _meshes[0]->vboData->uvs.end());
 		_vboData->indices.insert(_vboData->indices.end(), _meshes[0]->vboData->indices.begin(), _meshes[0]->vboData->indices.end());
 	}
 	_camera = Camera::Ptr(new Camera);
@@ -118,12 +118,31 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 		height;
 	char *buffer = esLoadTGA(esContext->platformData, "splash04.tga", &width, &height,&dataLen);
 	g_textureData  = std::make_shared<TextureData>(buffer, width, height, dataLen);
-	_program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
+	_texture = _device->CreateTexture2D(g_textureData);
+	_program = _device->CreateGPUProgram(vStr, fStr);
 	for (auto mesh : _meshes)
 	{
 		mesh->vbo = _device->CreateVBO();
 		_device->UpdateVBO(mesh->vbo, _vboData);
 	}
+
+	const glm::vec3 up(0, 1, 0);
+	auto viewMat = glm::lookAt(_camera->position, _camera->target, up);
+	_device->UseGPUProgram(_program);
+	auto mvpParam = _program->GetParam("MVP");
+	
+	glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_device->GetScreenWidth() / _device->GetScreenHeigt(), 0.1f, 20.0f);
+	auto mesh = _meshes[0];
+
+	auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
+	auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
+	auto wordlMat = w0 * w1;
+	_mvp = projMat * viewMat* wordlMat;
+	_device->SetGPUProgramParamAsMat4(mvpParam, _mvp);
+	_device->UseTexture2D(_texture,1);
+	auto textParam = _program->GetParam("baseTex");
+	_device->SetGPUProgramParamAsInt(textParam,1);
+	_vbo = mesh->vbo;
 }
 
 void DemoBase::OnDestroyDevice()
@@ -143,7 +162,7 @@ void DemoBase::OnDestroyDevice()
 }
 
 static double g_accTime = 0;
-static unsigned g_accCount = 0;
+static unsigned int g_accCount = 0;
 static float g_fps = 0.0f;
 glm::mat4 g_mat;
 void SimulateBusy()
@@ -170,8 +189,8 @@ void DemoBase::Update(float dt)
 	g_fps = newFPs;
 	for (int i = 0; i < _meshes[0]->vboData->vertices.size(); ++i)
 	{
-		_meshes[0]->vboData->vertices[i].x = sinf(_rotaion) * _vboData->vertices[i].x;
-		_meshes[0]->vboData->vertices[i].y = cosf(_rotaion) * _vboData->vertices[i].y;
+		_meshes[0]->vboData->vertices[i].pos.x = sinf(_rotaion) * _vboData->vertices[i].pos.x;
+		_meshes[0]->vboData->vertices[i].pos.y = cosf(_rotaion) * _vboData->vertices[i].pos.y;
 	}
 	for (auto mesh : _meshes)
 	{
@@ -179,48 +198,22 @@ void DemoBase::Update(float dt)
 	}
 	if (g_accCount % 200 == 0)
 	{
-		esLogMessage("Update avgfps: %f currentFPs: %f delta: %f\n", avgFps, newFPs, delta);
+		esLogMessage("Update avgfps: %f currentFPs: %f delta: %f %u\n", avgFps, newFPs, delta,g_accCount);
+	}
+	if (g_accCount >= 2000)
+	{
+		g_accCount = 0;
+		g_accTime = 0;
 	}
 }
 
 
 
-static double s_createShaderAccTime = 0;
-static unsigned int s_createShaderAccCount = 0;
 
 void DemoBase::Render()
 {
-	_device->BeginRender();
-
 	_device->Clear();
-
-	//BeginProfile("device.CreateGPUProgram");
-	float createShaderTime = TimeSinceStartup();
-	//auto program = _device->CreateGPUProgram(vShaderStr, fShaderStr);
-	createShaderTime = TimeSinceStartup() - createShaderTime;
-	++s_createShaderAccCount;
-	s_createShaderAccTime += createShaderTime;
-	float avgTime = s_createShaderAccTime / s_createShaderAccCount;
-	//esLogMessage("device.CreateGPUProgram cost: %f avg: %f\n", createShaderTime, avgTime);
-	_device->UseGPUProgram(_program);
-	_texture = _device->CreateTexture2D(g_textureData);
-	_device->UseTexture2D(_texture);
-	const glm::vec3 up(0, 1, 0);
-	auto viewMat = glm::lookAt(_camera->position, _camera->target, up);
-	auto mvpParam = _program->GetParam("MVP");
-	glm::mat4 projMat = glm::perspective(glm::radians(45.0f), (float)_device->GetScreenWidth() / _device->GetScreenHeigt(), 0.1f, 20.0f);
-	auto mesh = _meshes[0];
-
-	auto w0 = glm::translate(glm::mat4(1.0f), mesh->position);
-	auto w1 = glm::eulerAngleXYZ(mesh->rotation.x, mesh->rotation.y, mesh->rotation.z);
-	auto wordlMat = w0 * w1;
-	auto mvp = projMat * viewMat* wordlMat;
-	_device->SetGPUProgramParamAsMat4(mvpParam, mvp);
-	//_device->UpdateVBO(mesh->vbo, _vboData);
-	_device->DrawVBO(mesh->vbo);
-
-	_device->DeleteTexture2D(_texture);
-	_texture = nullptr;
+	_device->DrawVBO(_vbo);
 	_device->Present();
 }
 

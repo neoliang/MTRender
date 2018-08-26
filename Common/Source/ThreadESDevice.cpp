@@ -152,11 +152,12 @@ namespace RenderEngine {
 	{
 	private:
 		ThreadedTexture2D * _texture;
+		unsigned int _index;
 	public:
-		UseTexture2DCMD(ThreadedTexture2D* tex) :_texture(tex) {}
+		UseTexture2DCMD(ThreadedTexture2D* tex,unsigned index) :_texture(tex),_index(index) {}
 		void Execute(ESDevice* device)
 		{
-			device->UseTexture2D(_texture->realTexture);
+			device->UseTexture2D(_texture->realTexture,_index);
 		}
 	};
 
@@ -175,6 +176,11 @@ namespace RenderEngine {
 
 	class CreateTexture2DCMD : public ThreadDeviceCommand
 	{
+		void Execute(ESDevice* device)
+		{
+			_texture->realTexture = device->CreateTexture2D(_data);
+		}
+
 	private:
 		TextureData::Ptr _data;
 		ThreadedTexture2D* _texture;
@@ -183,10 +189,7 @@ namespace RenderEngine {
 			: _data(data),_texture(tex)
 		{
 		}
-		void Execute(ESDevice* device)
-		{
-			_texture->realTexture = device->CreateTexture2D(_data);
-		}
+
 		void OnExecuteEnd(ThreadESDevice* threadDevice)
 		{
 			if (threadDevice->IsCreateResInBlockMode())
@@ -672,23 +675,11 @@ namespace RenderEngine {
 	Texture2D* ThreadESDevice::CreateTexture2D(const TextureData::Ptr& data)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
-		if (!_threaded)
-		{
-			texture->realTexture = _realDevice->CreateTexture2D(data);
-		}
-		else
-		{
-			CreateTexture2DCMD* cmd = new CreateTexture2DCMD(data,texture);
-			AUTOLOCK
-				_commandQueue.push(cmd);
-			if (_returnResImmediately)
-			{
-				WaitForSignal(WaitType_CreateTexture);
-			}
-				
-		}
+		CreateTexture2DCMD* cmd = new CreateTexture2DCMD(data, texture);
+		_commandQueue.push(cmd);				
 		return texture;
 	}
+
 	void ThreadESDevice::DeleteTexture2D(Texture2D* texture)
 	{
 		ThreadedTexture2D* threadedText = static_cast<ThreadedTexture2D*>(texture);
@@ -704,17 +695,17 @@ namespace RenderEngine {
 				_commandQueue.push(cmd);
 		}
 	}
-	void ThreadESDevice::UseTexture2D(Texture2D* texture)
+	void ThreadESDevice::UseTexture2D(Texture2D* texture,unsigned int index)
 	{
 		ThreadedTexture2D* threadedText = static_cast<ThreadedTexture2D*>(texture);
 		if (!_threaded)
 		{
-			_realDevice->UseTexture2D(threadedText->realTexture);
+			_realDevice->UseTexture2D(threadedText->realTexture,index);
 		}
 		else
 		{
 			AUTOLOCK
-				_commandQueue.push(new UseTexture2DCMD(threadedText));
+				_commandQueue.push(new UseTexture2DCMD(threadedText,index));
 		}
 	}
 }

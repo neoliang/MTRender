@@ -109,22 +109,12 @@ namespace RenderEngine
 	Texture2D* ThreadBufferESDevice::CreateTexture2D(const TextureData::Ptr& data)
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
-		if (!_threaded)
-		{
-			texture->realTexture = _realDevice->CreateTexture2D(data);
-		}
-		else
-		{
-			GfxCmdCreateTextureData cmddata{
-				texture,data->width,data->height,data->length
-			};
-			_commandBuffer->WriteValueType(kGfxCmd_CreateTexture2D);
-			_commandBuffer->WriteValueType(cmddata);
-			//BeginProfile("kGfxCmd_CreateTexture2D write");
-			_commandBuffer->WriteStreamingData(data->pixels, data->length);
-			//EndProfile();
-
-		}
+		GfxCmdCreateTextureData cmddata{
+			texture,data->width,data->height,data->length
+		};
+		_commandBuffer->WriteValueType(kGfxCmd_CreateTexture2D);
+		_commandBuffer->WriteValueType(cmddata);
+		_commandBuffer->WriteStreamingData(data->pixels, data->length);
 		return texture;
 	}
 
@@ -144,17 +134,18 @@ namespace RenderEngine
 		}
 	}
 
-	void ThreadBufferESDevice::UseTexture2D(Texture2D* texture)
+	void ThreadBufferESDevice::UseTexture2D(Texture2D* texture, unsigned int index)
 	{
 		ThreadedTexture2D* threadedText = static_cast<ThreadedTexture2D*>(texture);
 		if (!_threaded)
 		{
-			_realDevice->UseTexture2D(threadedText->realTexture);
+			_realDevice->UseTexture2D(threadedText->realTexture,index);
 		}
 		else
 		{
 			_commandBuffer->WriteValueType(kGfxCmd_UseTexture2D);
 			_commandBuffer->WriteValueType(threadedText);
+			_commandBuffer->WriteValueType(index);
 			_commandBuffer->WriteSubmitData();
 		}
 	}
@@ -292,8 +283,7 @@ namespace RenderEngine
 			};
 			_commandBuffer->WriteValueType(data);
 			//BeginProfile("kGfxCmd_UpdateVBO write");
-			_commandBuffer->WriteStreamingData(&vboData->vertices[0],data.verticesCount*sizeof(glm::vec3));
-			_commandBuffer->WriteStreamingData(&vboData->uvs[0],data.verticesCount*sizeof(glm::vec2));
+			_commandBuffer->WriteStreamingData(&vboData->vertices[0],data.verticesCount*sizeof(VBOData::Vertex));
 			_commandBuffer->WriteStreamingData(&vboData->indices[0],data.indicesCount*sizeof(unsigned short));
 			//EndProfile();
 		}
@@ -486,17 +476,14 @@ namespace RenderEngine
 		}
 		case RenderEngine::kGfxCmd_CreateTexture2D:
 		{	
-			auto data = _commandBuffer->ReadValueType<GfxCmdCreateTextureData>();
-			
+			auto data = _commandBuffer->ReadValueType<GfxCmdCreateTextureData>();			
 			char *buff = new char[data.dataLen];
-			//BeginProfile("kGfxCmd_CreateTexture2D read");
 			_commandBuffer->ReadStreamingData(buff, data.dataLen);
-			//EndProfile();
 			TextureData::Ptr textureData = std::make_shared<TextureData>(buff,data.width,data.height,data.dataLen);
 			data.texture->realTexture = _realDevice->CreateTexture2D(textureData);
-			textureData.reset();
 			break; 
 		}
+
 		case RenderEngine::kGfxCmd_DeleteTexture2D:
 		{
 			auto texture = _commandBuffer->ReadValueType<ThreadedTexture2D*>();
@@ -508,7 +495,8 @@ namespace RenderEngine
 		case RenderEngine::kGfxCmd_UseTexture2D:
 		{
 			auto texture = _commandBuffer->ReadValueType<ThreadedTexture2D*>();
-			_realDevice->UseTexture2D(texture->realTexture);
+			auto index = _commandBuffer->ReadValueType<unsigned int>();
+			_realDevice->UseTexture2D(texture->realTexture,index);
 			_commandBuffer->ReadReleaseData();
 			break;
 		}
@@ -572,12 +560,10 @@ namespace RenderEngine
 			VBOData::Ptr vboData = std::make_shared<VBOData>();
 			//BeginProfile("kGfxCmd_UpdateVBO alloc");
 			vboData->vertices.resize(data.verticesCount);
-			vboData->uvs.resize(data.verticesCount);
 			vboData->indices.resize(data.indicesCount);
 			//EndProfile();
 			//BeginProfile("kGfxCmd_UpdateVBO read");
-			_commandBuffer->ReadStreamingData((void*)&vboData->vertices[0], data.verticesCount * sizeof(glm::vec3));
-			_commandBuffer->ReadStreamingData((void*)&vboData->uvs[0], data.verticesCount * sizeof(glm::vec2));
+			_commandBuffer->ReadStreamingData((void*)&vboData->vertices[0], data.verticesCount * sizeof(VBOData::Vertex));
 			_commandBuffer->ReadStreamingData((void*)&vboData->indices[0], data.indicesCount * sizeof(unsigned short));
 			//EndProfile();
 			_realDevice->UpdateVBO(data.vbo->realVbo, vboData);

@@ -77,7 +77,7 @@ namespace RenderEngine {
 
 		virtual Texture2D* CreateTexture2D(const TextureData::Ptr& data) = 0;
 		virtual void DeleteTexture2D(Texture2D* texture) = 0;
-		virtual void UseTexture2D(Texture2D* texture) = 0;		
+		virtual void UseTexture2D(Texture2D* texture,unsigned int index) = 0;
 		virtual void SetClearColor(float r, float g, float b, float alpha) = 0;
 		virtual void DrawTriangle(std::vector<glm::vec3>& vertices)=0;
 		virtual void SetViewPort(int x, int y, int width, int height) = 0;
@@ -127,7 +127,7 @@ namespace RenderEngine {
 
 		virtual Texture2D* CreateTexture2D(const TextureData::Ptr& data);
 		virtual void DeleteTexture2D(Texture2D* texture);
-		virtual void UseTexture2D(Texture2D* texture);
+		virtual void UseTexture2D(Texture2D* texture,unsigned int index);
 		virtual void SetClearColor(float r, float g, float b, float alpha);
 		virtual void DrawTriangle(std::vector<glm::vec3>& vertices);
 		virtual void SetViewPort(int x, int y, int width, int height);

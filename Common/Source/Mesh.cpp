@@ -45,12 +45,17 @@ std::vector<Mesh::Ptr> Mesh::LoadMeshFromFile(const std::string & file)
 			float x = verticesArray[index * verticesStep].GetFloat();
 			float y = verticesArray[index * verticesStep + 1].GetFloat();
 			float z = -verticesArray[index * verticesStep + 2].GetFloat();
-			mesh->vboData->vertices[index] = glm::vec3(x, y, z);
+			float nx = verticesArray[index * verticesStep + 3].GetFloat();
+			float ny = verticesArray[index * verticesStep + 4].GetFloat();
+			float nz = -verticesArray[index * verticesStep + 5].GetFloat();
+
+			mesh->vboData->vertices[index].pos = glm::vec3(x, y, z);
+			mesh->vboData->vertices[index].normal = glm::vec3(nx, ny, nz);
 			if (uvCount > 0)
 			{
 				float u = verticesArray[index * verticesStep + 6].GetFloat();
 				float v = verticesArray[index * verticesStep + 7].GetFloat();
-				mesh->vboData->uvs[index] = glm::vec2(u, v);
+				mesh->vboData->vertices[index].uv = glm::vec2(u, v);
 			}
 		}
 

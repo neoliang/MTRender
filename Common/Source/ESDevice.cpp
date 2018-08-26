@@ -9,6 +9,7 @@
 #include "ESDevice.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/euler_angles.hpp"
+#include <stddef.h>
 #include <algorithm>
 #include <map>
 namespace RenderEngine {
@@ -45,10 +46,6 @@ namespace RenderEngine {
 			if (iter == _nameToParams.end())
 			{
 				int location = glGetUniformLocation(ProgramID, name.c_str());
-				if (location < 0)
-				{
-					return nullptr;
-				}
 				GPUProgramParamImp *param = new GPUProgramParamImp(location);
 				_nameToParams.insert(iter, std::make_pair(name, param));
 				return param;
@@ -178,9 +175,9 @@ namespace RenderEngine {
 		glDeleteTextures(1, &realTex->textureID);
 		delete texture;
 	}
-	void ESDeviceImp::UseTexture2D(Texture2D* texture)
+	void ESDeviceImp::UseTexture2D(Texture2D* texture, unsigned int index)
 	{
-		glActiveTexture(GL_TEXTURE0 );
+		glActiveTexture(GL_TEXTURE0 + index);
 		glBindTexture(GL_TEXTURE_2D, static_cast<Texture2DImp*>(texture)->textureID);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -241,7 +238,7 @@ namespace RenderEngine {
 		glBufferData(GL_ARRAY_BUFFER, vboData->vertices.size() * sizeof(glm::vec3), &vboData->vertices[0], GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->uvbuffer);
-		glBufferData(GL_ARRAY_BUFFER, vboData->uvs.size() * sizeof(glm::vec2), &vboData->uvs[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vboData->vertices.size() * sizeof(glm::vec2), &vboData->vertices[0], GL_STATIC_DRAW);
 
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
@@ -263,12 +260,13 @@ namespace RenderEngine {
 		glBindVertexArray(vboImp->vertexArrayID);
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->vertexbuffer);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VBOData::Vertex), (void*)0);
 
-		glBindBuffer(GL_ARRAY_BUFFER, vboImp->uvbuffer);
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VBOData::Vertex), (void*)offsetof(VBOData::Vertex, normal));
 
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VBOData::Vertex), (void*)offsetof(VBOData::Vertex, uv));
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
 		glDrawElements(GL_TRIANGLES, vboImp->elementSize, GL_UNSIGNED_SHORT, (void*)0);

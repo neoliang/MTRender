@@ -19,8 +19,13 @@ namespace RenderEngine {
 
 	struct VBOData
 	{
-		std::vector<glm::vec3> vertices;
-		std::vector<glm::vec2> uvs;
+		struct Vertex
+		{
+			glm::vec3 pos;
+			glm::vec3 normal;
+			glm::vec2 uv;
+		};
+		std::vector<Vertex> vertices;
 		std::vector<unsigned short> indices;
 		typedef std::shared_ptr<VBOData> Ptr;
 
@@ -46,7 +51,6 @@ namespace RenderEngine {
 		{
 			vboData = std::make_shared<VBOData>();
 			vboData->vertices.resize(vericesCount);
-			vboData->uvs.resize(vericesCount);
 			vboData->indices.resize(indicesCount);
 		}
 		~Mesh()
