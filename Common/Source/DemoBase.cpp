@@ -60,18 +60,20 @@ DemoBase* DemoBase::Instnce()
 	return gs_demo;
 }
 
-VBOData::Ptr _vboData = std::make_shared<VBOData>();
+VBOData::Ptr _vboData = nullptr;
 glm::mat4 _mvp;
 VBO* _vbo;
 void DemoBase::Init()
 {
 	_meshes = Mesh::LoadMeshFromFile("monkey.babylon");
-	_vboData->vertices = _meshes[0]->vboData->vertices;
-	_vboData->indices = _meshes[0]->vboData->indices;
-	for (int i = 0; i < 40; ++i)
+	const unsigned int instanceCount = 40;
+	_vboData = std::make_shared<VBOData>(_meshes[0]->vboData->verticesCount*instanceCount, _meshes[0]->vboData->indicesCount*instanceCount);
+	for (int i = 0; i < instanceCount; ++i)
 	{
-		_vboData->vertices.insert(_vboData->vertices.end(), _meshes[0]->vboData->vertices.begin(),_meshes[0]->vboData->vertices.end());
-		_vboData->indices.insert(_vboData->indices.end(), _meshes[0]->vboData->indices.begin(), _meshes[0]->vboData->indices.end());
+		auto vbufferSize = _meshes[0]->vboData->verticesCount * sizeof(VBOData::Vertex);
+		memcpy(_vboData->vertices + i * _meshes[0]->vboData->verticesCount, _meshes[0]->vboData->vertices, vbufferSize);
+		auto ibufferSzie = _meshes[0]->vboData->indicesCount * sizeof(unsigned short);
+		memcpy(_vboData->indices + i * _meshes[0]->vboData->indicesCount, _meshes[0]->vboData->indices, ibufferSzie);
 	}
 	_camera = Camera::Ptr(new Camera);
 	_camera->position = vec3(0, 0, 12.0f);
@@ -187,7 +189,7 @@ void DemoBase::Update(float dt)
 	float newFPs = 1.0f / dt;
 	float delta = newFPs - g_fps;
 	g_fps = newFPs;
-	for (int i = 0; i < _meshes[0]->vboData->vertices.size(); ++i)
+	for (int i = 0; i < _meshes[0]->vboData->verticesCount; ++i)
 	{
 		_meshes[0]->vboData->vertices[i].pos.x = sinf(_rotaion) * _vboData->vertices[i].pos.x;
 		_meshes[0]->vboData->vertices[i].pos.y = cosf(_rotaion) * _vboData->vertices[i].pos.y;

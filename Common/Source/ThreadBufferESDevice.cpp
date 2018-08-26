@@ -279,12 +279,12 @@ namespace RenderEngine
 		{
 			_commandBuffer->WriteValueType(kGfxCmd_UpdateVBO);
 			GfxCmdUpdateVBOData data{
-				(ThreadedVBO*)vbo,vboData->vertices.size(),vboData->indices.size()
+				(ThreadedVBO*)vbo,vboData->verticesCount,vboData->indicesCount
 			};
 			_commandBuffer->WriteValueType(data);
 			//BeginProfile("kGfxCmd_UpdateVBO write");
-			_commandBuffer->WriteStreamingData(&vboData->vertices[0],data.verticesCount*sizeof(VBOData::Vertex));
-			_commandBuffer->WriteStreamingData(&vboData->indices[0],data.indicesCount*sizeof(unsigned short));
+			_commandBuffer->WriteStreamingData(vboData->vertices,data.verticesCount*sizeof(VBOData::Vertex));
+			_commandBuffer->WriteStreamingData(vboData->indices,data.indicesCount*sizeof(unsigned short));
 			//EndProfile();
 		}
 	}
@@ -557,14 +557,12 @@ namespace RenderEngine
 		case RenderEngine::kGfxCmd_UpdateVBO:
 		{	
 			GfxCmdUpdateVBOData data = _commandBuffer->ReadValueType<GfxCmdUpdateVBOData>();
-			VBOData::Ptr vboData = std::make_shared<VBOData>();
 			BeginProfile("kGfxCmd_UpdateVBO alloc");
-			vboData->vertices.resize(data.verticesCount);
-			vboData->indices.resize(data.indicesCount);
+			VBOData::Ptr vboData = std::make_shared<VBOData>(data.verticesCount, data.indicesCount);
 			EndProfile();
-			BeginProfile("kGfxCmd_UpdateVBO read");
-			_commandBuffer->ReadStreamingData((void*)&vboData->vertices[0], data.verticesCount * sizeof(VBOData::Vertex));
-			_commandBuffer->ReadStreamingData((void*)&vboData->indices[0], data.indicesCount * sizeof(unsigned short));
+			BeginProfile("kGfxCmd_UpdateVBO write");
+			_commandBuffer->ReadStreamingData((void*)vboData->vertices, data.verticesCount * sizeof(VBOData::Vertex));
+			_commandBuffer->ReadStreamingData((void*)vboData->indices, data.indicesCount * sizeof(unsigned short));
 			EndProfile();
 			_realDevice->UpdateVBO(data.vbo->realVbo, vboData);
 			vboData.reset();

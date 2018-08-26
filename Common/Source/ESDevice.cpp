@@ -83,6 +83,7 @@ namespace RenderEngine {
 	public:
 		GLuint vertexArrayID;
 		GLuint vertexbuffer;
+		GLuint normalbuffer;
 		GLuint uvbuffer;
 		GLuint elementbuffer;
 		GLuint elementSize;
@@ -225,6 +226,7 @@ namespace RenderEngine {
 		glGenVertexArrays(1, &vbo->vertexArrayID);
 		glBindVertexArray(vbo->vertexArrayID);
 		glGenBuffers(1, &vbo->vertexbuffer);
+		glGenBuffers(1, &vbo->normalbuffer);
 		glGenBuffers(1, &vbo->uvbuffer);
 		glGenBuffers(1, &vbo->elementbuffer);
 		return vbo;
@@ -235,15 +237,18 @@ namespace RenderEngine {
 
 
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->vertexbuffer);
-		glBufferData(GL_ARRAY_BUFFER, vboData->vertices.size() * sizeof(glm::vec3), &vboData->vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vboData->verticesCount * sizeof(glm::vec3), vboData->vertices, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vboImp->normalbuffer);
+		glBufferData(GL_ARRAY_BUFFER, vboData->verticesCount * sizeof(glm::vec3), vboData->vertices, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vboImp->uvbuffer);
-		glBufferData(GL_ARRAY_BUFFER, vboData->vertices.size() * sizeof(glm::vec2), &vboData->vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vboData->verticesCount * sizeof(glm::vec2), vboData->vertices, GL_STATIC_DRAW);
 
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboImp->elementbuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData->indices.size() * sizeof(unsigned short), &vboData->indices[0], GL_STATIC_DRAW);
-		vboImp->elementSize = vboData->indices.size();
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vboData->indicesCount * sizeof(unsigned short), vboData->indices, GL_STATIC_DRAW);
+		vboImp->elementSize = vboData->indicesCount;
 	}
 	void ESDeviceImp::DeleteVBO(VBO* vbo)
 	{
@@ -251,6 +256,7 @@ namespace RenderEngine {
 		glDeleteBuffers(1, &vboImp->vertexbuffer);
 		glDeleteBuffers(1, &vboImp->elementbuffer);
 		glDeleteBuffers(1, &vboImp->uvbuffer);
+		glDeleteBuffers(1, &vboImp->normalbuffer);
 		glDeleteVertexArrays(1, &vboImp->vertexArrayID);
 		delete vboImp;
 	}

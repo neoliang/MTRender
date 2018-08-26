@@ -25,11 +25,25 @@ namespace RenderEngine {
 			glm::vec3 normal;
 			glm::vec2 uv;
 		};
-		std::vector<Vertex> vertices;
-		std::vector<unsigned short> indices;
+		VBOData(unsigned int verticesCount_, unsigned int indicesCount_)
+			:verticesCount(verticesCount_), indicesCount(indicesCount_) 
+		{
+			_buffer = new char[verticesCount * sizeof(Vertex) + indicesCount * sizeof(unsigned short)];
+			vertices = (Vertex*)_buffer;
+			indices = (unsigned short*)(_buffer + verticesCount * sizeof(Vertex));
+		}
+		~VBOData()
+		{
+			delete[] _buffer;
+		}
+		Vertex* vertices;
+		unsigned short* indices;
+		unsigned int verticesCount;
+		unsigned int indicesCount;
 		typedef std::shared_ptr<VBOData> Ptr;
 
-
+	private:
+		char* _buffer;
 	};
 
 	class Mesh
@@ -49,9 +63,7 @@ namespace RenderEngine {
 		Mesh(const std::string& name_, int vericesCount, int indicesCount = 0)
 			:name(name_), position(0, 0, 0), rotation(0, 0, 0)
 		{
-			vboData = std::make_shared<VBOData>();
-			vboData->vertices.resize(vericesCount);
-			vboData->indices.resize(indicesCount);
+			vboData = std::make_shared<VBOData>(vericesCount, indicesCount);
 		}
 		~Mesh()
 		{
