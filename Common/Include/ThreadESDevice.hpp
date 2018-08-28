@@ -14,6 +14,7 @@
 #include "ThreadESDeviceBase.h"
 #include "glm/glm.hpp"
 namespace RenderEngine {
+
 	template<class T>
 	class LockFreeQueue
 	{
@@ -62,13 +63,39 @@ namespace RenderEngine {
 		virtual void OnExecuteEnd(ThreadESDevice* threadDevice) {};
 	};
 
-	class ThreadESDevice : public ThreadESDeviceBase
-	{
+	class CommandQueue {
+	public:
+		virtual ~CommandQueue() {}
+		virtual ThreadDeviceCommand* Pop() = 0;
+		virtual void Push(ThreadDeviceCommand* cmd) = 0;
+		virtual bool Empty()const = 0;
+	};
 
+	class LockFreeCommandQueue : public CommandQueue
+	{
 	private:
 		LockFreeQueue<ThreadDeviceCommand*> _commandQueue;
 	public:
-		ThreadESDevice(ESContext* context,bool returnResImmediately);
+		virtual ThreadDeviceCommand* Pop()
+		{
+			return _commandQueue.Pop();
+		}
+		virtual void Push(ThreadDeviceCommand* cmd)
+		{
+			_commandQueue.push(cmd);
+		}
+		virtual bool Empty()const
+		{
+			return false;
+		}
+	};
+	class ThreadESDevice : public ThreadESDeviceBase
+	{
+
+	protected:
+		CommandQueue* _commandQueue;
+	public:
+		ThreadESDevice(ESContext* context,bool returnResImmediately, CommandQueue* commandQueue = new LockFreeCommandQueue());
 		~ThreadESDevice();
 		virtual void Clear();
 		virtual void UseGPUProgram(GPUProgram* program);
@@ -104,6 +131,55 @@ namespace RenderEngine {
 	public: //thread base
 		virtual void RunOneThreadCommand();
 		virtual void InitThreadGPUProgramParam(ThreadedGPUProgram* program, ThreadedGPUProgramParam* param, const std::string& name);
+	};
+
+	class NormalCommandQueue : public CommandQueue
+	{
+	private:
+		std::queue<ThreadDeviceCommand*> _queueImp;
+	public:
+		virtual ThreadDeviceCommand* Pop()
+		{
+			auto cmd = _queueImp.front();
+			_queueImp.pop();
+			return cmd;
+		}
+		virtual void Push(ThreadDeviceCommand* cmd)
+		{
+			_queueImp.push(cmd);
+		}
+		virtual bool Empty()const
+		{
+			return _queueImp.empty();
+		}
+
+	};
+	class ThreadDoubleQueueESDevice : public ThreadESDevice
+	{
+		NormalCommandQueue* _updateQueue;
+		NormalCommandQueue* _renderQueue;
+		Semaphore _mainThreadSem;
+		Semaphore _renderThreadSem;
+		volatile bool _suspend;
+	public:
+		ThreadDoubleQueueESDevice(ESContext* context, bool returnResImmediately)
+			:ThreadESDevice(context,returnResImmediately,nullptr)
+			,_suspend(false)
+		{
+			_updateQueue = new	NormalCommandQueue;
+			_renderQueue = new NormalCommandQueue;
+			_commandQueue = _updateQueue;
+		}
+		~ThreadDoubleQueueESDevice()
+		{
+			_commandQueue = nullptr;
+			delete _updateQueue;
+			delete _renderQueue;
+		}
+
+		virtual void BeginRender();
+		virtual void Present();
+		virtual void RunOneThreadCommand();
 	};
 }
 #endif /* ThreadESDevice_hpp */

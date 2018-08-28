@@ -93,6 +93,9 @@ void DemoBase::OnCreateDevice(ESContext *esContext)
 	case DemoBase::kThreadQueue:
 		_device = new ThreadESDevice(esContext, _returnResImmediately);
 		break;
+	case DemoBase::KThreadDoubleQueue:
+		_device = new ThreadDoubleQueueESDevice(esContext, _returnResImmediately);
+		break;
 	default:
 		_device = new ESDeviceImp(esContext);
 		break;
@@ -214,6 +217,7 @@ void DemoBase::Update(float dt)
 
 void DemoBase::Render()
 {
+	_device->BeginRender();
 	_device->Clear();
 	_device->UpdateVBO(_vbo,_vboData);
 	_device->DrawVBO(_vbo);

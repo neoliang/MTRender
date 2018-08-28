@@ -10,6 +10,7 @@ public:
 	{
 		kThreadBuffer,
 		kThreadQueue,
+		KThreadDoubleQueue,
 		kSingleThread,
 	};
 private:

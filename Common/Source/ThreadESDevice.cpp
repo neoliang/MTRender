@@ -9,25 +9,6 @@
 #include "ThreadESDevice.hpp"
 #include <mutex>
 namespace RenderEngine {
-	class AutoLock
-	{
-
-		std::mutex& _lock;
-	public:
-		AutoLock(std::mutex& l)
-			:_lock(l) {
-			//pthread_mutex_lock(&_lock);
-		}
-		~AutoLock()
-		{
-			//pthread_mutex_unlock(&_lock);
-		}
-
-	};
-
-#define AUTOLOCK
-	//#define AUTOLOCK AutoLock lock(_mutex);
-
 	class ClearCMD : public ThreadDeviceCommand
 	{
 	public:
@@ -282,8 +263,7 @@ namespace RenderEngine {
 			_realDevice->Clear();
 			return;
 		}
-		AUTOLOCK
-			_commandQueue.push(new ClearCMD());
+		_commandQueue->Push(new ClearCMD());
 	}
 	void ThreadESDevice::SetViewPort(int x, int y, int width, int height)
 	{
@@ -292,8 +272,7 @@ namespace RenderEngine {
 			_realDevice->SetViewPort(x, y, width, height);
 			return;
 		}
-		AUTOLOCK
-			_commandQueue.push(new SetViewPortCMD(x, y, width, height));
+		_commandQueue->Push(new SetViewPortCMD(x, y, width, height));
 	}
 
 	void ThreadESDevice::SetClearColor(float r, float g, float b, float alpha)
@@ -303,8 +282,7 @@ namespace RenderEngine {
 			_realDevice->SetClearColor(r, g, b, alpha);
 			return;
 		}
-		AUTOLOCK
-			_commandQueue.push(new SetClearColorCMD(r, g, b, alpha));
+		_commandQueue->Push(new SetClearColorCMD(r, g, b, alpha));
 	}
 	void ThreadESDevice::DrawTriangle(std::vector<glm::vec3>& vertices)
 	{
@@ -313,16 +291,20 @@ namespace RenderEngine {
 			_realDevice->DrawTriangle(vertices);
 			return;
 		}
-		AUTOLOCK
-			_commandQueue.push(new DrawTriangleCMD(vertices));
+		_commandQueue->Push(new DrawTriangleCMD(vertices));
 	}
-	ThreadESDevice::ThreadESDevice(ESContext* context, bool returnResImmediately)
+	ThreadESDevice::ThreadESDevice(ESContext* context, bool returnResImmediately,CommandQueue* commandQueue)
 		:ThreadESDeviceBase(context,returnResImmediately)
+		,_commandQueue(commandQueue)
 	{
 		esLogMessage("[render] ThreadESDevice");
 	}
 	ThreadESDevice::~ThreadESDevice()
 	{
+		if (_commandQueue != nullptr)
+		{
+			delete _commandQueue;
+		}
 	}
 	void ThreadESDevice::BeginRender()
 	{
@@ -340,10 +322,7 @@ namespace RenderEngine {
 			_isInPresenting = false;
 			return;
 		}
-		{
-			AUTOLOCK
-				_commandQueue.push(new PresentCMD());
-		}
+		_commandQueue->Push(new PresentCMD());
 	}
 	void RenderEngine::ThreadESDevice::AcqiureThreadOwnerShip()
 	{
@@ -352,7 +331,7 @@ namespace RenderEngine {
 		{
 			return;
 		}
-		_commandQueue.push(new ReleasOwnerShipCMD());
+		_commandQueue->Push(new ReleasOwnerShipCMD());
 		WaitForOwnerShip();
 		_realDevice->AcqiureThreadOwnerShip();
 		_threaded = false;
@@ -365,13 +344,13 @@ namespace RenderEngine {
 			return;
 		}
 		_realDevice->ReleaseThreadOwnership();
-		_commandQueue.push(new AcquireOwnerShipCMD());
+		_commandQueue->Push(new AcquireOwnerShipCMD());
 		WaitForOwnerShip();
 		_threaded = true;
 	}
 	void ThreadESDevice::RunOneThreadCommand()
 	{
-		ThreadDeviceCommand* cmd = _commandQueue.Pop();
+		ThreadDeviceCommand* cmd = _commandQueue->Pop();
 		cmd->Execute(_realDevice);
 		cmd->OnExecuteEnd(this);
 		delete cmd;
@@ -404,7 +383,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new InitThreadGPUProgramParamCMD(program,param,name));
+			_commandQueue->Push(new InitThreadGPUProgramParamCMD(program,param,name));
 		}
 	}
 	void ThreadESDevice::UseGPUProgram(GPUProgram* program)
@@ -416,8 +395,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			AUTOLOCK
-			_commandQueue.push(new UseGPUProgramCMD(threadedP));
+			_commandQueue->Push(new UseGPUProgramCMD(threadedP));
 		}		
 	}
 	void ThreadESDevice::DeletGPUProgram(GPUProgram* program)
@@ -430,8 +408,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			AUTOLOCK
-				_commandQueue.push(new DeleteGPUProgramCMD(threadedP));
+			_commandQueue->Push(new DeleteGPUProgramCMD(threadedP));
 		}
 
 	}
@@ -446,8 +423,7 @@ namespace RenderEngine {
 		{
 			CreateGPUProgramCMD* cmd = new CreateGPUProgramCMD(vertexShaderStr, fragmentShaderStr, program);
 			{
-				AUTOLOCK
-					_commandQueue.push(cmd);
+				_commandQueue->Push(cmd);
 			}
 			if (_returnResImmediately)
 			{
@@ -466,8 +442,7 @@ namespace RenderEngine {
 		else
 		{
 			CreateVBOCMD* cmd = new CreateVBOCMD(vbo);
-			AUTOLOCK
-				_commandQueue.push(cmd);
+			_commandQueue->Push(cmd);
 			if (_returnResImmediately)
 			{
 				this->WaitForSignal(WaitType_CreateVBO);
@@ -485,7 +460,7 @@ namespace RenderEngine {
 		else
 		{
 			UpdateVBOCMD* cmd = new UpdateVBOCMD(vboData, threadVbo);
-			_commandQueue.push(cmd);
+			_commandQueue->Push(cmd);
 
 		}
 	}
@@ -500,8 +475,7 @@ namespace RenderEngine {
 		else
 		{
 			DeleteVBOCMD* cmd = new DeleteVBOCMD(threadedVbo);
-			AUTOLOCK
-				_commandQueue.push(cmd);
+			_commandQueue->Push(cmd);
 		}
 	}
 	void ThreadESDevice::DrawVBO(VBO* vbo)
@@ -513,8 +487,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			AUTOLOCK
-				_commandQueue.push(new DrawVBOCMD(threadedVbo));
+			_commandQueue->Push(new DrawVBOCMD(threadedVbo));
 		}
 	}
 	class SetGPUProgramParamAsIntCMD : public ThreadDeviceCommand
@@ -539,7 +512,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsIntCMD(param,value));
+			_commandQueue->Push(new SetGPUProgramParamAsIntCMD(param,value));
 		}
 	}
 	class SetGPUProgramParamAsFloatCMD : public ThreadDeviceCommand
@@ -564,7 +537,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsFloatCMD(param, value));
+			_commandQueue->Push(new SetGPUProgramParamAsFloatCMD(param, value));
 		}
 	}
 	class SetGPUProgramParamAsMat4CMD : public ThreadDeviceCommand
@@ -589,7 +562,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsMat4CMD(param, mat));
+			_commandQueue->Push(new SetGPUProgramParamAsMat4CMD(param, mat));
 		}
 	}
 	class SetGPUProgramParamAsIntArrayCMD : public ThreadDeviceCommand
@@ -614,7 +587,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsIntArrayCMD(param, values));
+			_commandQueue->Push(new SetGPUProgramParamAsIntArrayCMD(param, values));
 		}
 	}
 
@@ -641,7 +614,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsFloatArrayCMD(param, values));
+			_commandQueue->Push(new SetGPUProgramParamAsFloatArrayCMD(param, values));
 		}
 	}
 
@@ -668,7 +641,7 @@ namespace RenderEngine {
 		}
 		else
 		{
-			_commandQueue.push(new SetGPUProgramParamAsMat4ArrayCMD(param, values));
+			_commandQueue->Push(new SetGPUProgramParamAsMat4ArrayCMD(param, values));
 		}
 	}
 
@@ -676,7 +649,7 @@ namespace RenderEngine {
 	{
 		ThreadedTexture2D* texture = new ThreadedTexture2D();
 		CreateTexture2DCMD* cmd = new CreateTexture2DCMD(data, texture);
-		_commandQueue.push(cmd);				
+		_commandQueue->Push(cmd);				
 		return texture;
 	}
 
@@ -691,8 +664,7 @@ namespace RenderEngine {
 		else
 		{
 			DeleteTexture2DCMD* cmd = new DeleteTexture2DCMD(threadedText);
-			AUTOLOCK
-				_commandQueue.push(cmd);
+			_commandQueue->Push(cmd);
 		}
 	}
 	void ThreadESDevice::UseTexture2D(Texture2D* texture,unsigned int index)
@@ -704,8 +676,50 @@ namespace RenderEngine {
 		}
 		else
 		{
-			AUTOLOCK
-				_commandQueue.push(new UseTexture2DCMD(threadedText,index));
+			_commandQueue->Push(new UseTexture2DCMD(threadedText,index));
 		}
 	}
+
+	//double buffer queue
+	void ThreadDoubleQueueESDevice::BeginRender()
+	{
+		ThreadESDevice::BeginRender();
+		_suspend = false;
+		_renderThreadSem.Signal();
+	}
+	
+	void ThreadDoubleQueueESDevice::Present()
+	{
+		ThreadESDevice::Present();
+		if (!_suspend)
+		{
+			_mainThreadSem.WaitForSignal();
+		}
+		//swap buffer
+		std::swap(_renderQueue, _updateQueue);
+		_commandQueue = _updateQueue;
+	}
+
+	void ThreadDoubleQueueESDevice::RunOneThreadCommand()
+	{
+
+		if (_suspend)
+		{
+			_renderThreadSem.WaitForSignal();
+		}
+
+		if (!_renderQueue->Empty())
+		{
+			ThreadDeviceCommand* cmd = _renderQueue->Pop();
+			cmd->Execute(_realDevice);
+			cmd->OnExecuteEnd(this);
+			delete cmd;
+		}
+		else
+		{
+			_suspend = true;
+			_mainThreadSem.Signal();
+		}
+	}
+
 }
