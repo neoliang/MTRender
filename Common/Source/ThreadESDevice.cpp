@@ -684,6 +684,7 @@ namespace RenderEngine {
 	void ThreadDoubleQueueESDevice::BeginRender()
 	{
 		ThreadESDevice::BeginRender();
+		//let render thread begin
 		_suspend = false;
 		_renderThreadSem.Signal();
 	}
@@ -691,18 +692,19 @@ namespace RenderEngine {
 	void ThreadDoubleQueueESDevice::Present()
 	{
 		ThreadESDevice::Present();
+		//wait for render thread to complete
 		if (!_suspend)
 		{
 			_mainThreadSem.WaitForSignal();
 		}
-		//swap buffer
+		//now render thread is suspended ,we can swap buffer
 		std::swap(_renderQueue, _updateQueue);
 		_commandQueue = _updateQueue;
 	}
 
 	void ThreadDoubleQueueESDevice::RunOneThreadCommand()
 	{
-
+		//wait for main thread
 		if (_suspend)
 		{
 			_renderThreadSem.WaitForSignal();
@@ -717,6 +719,7 @@ namespace RenderEngine {
 		}
 		else
 		{
+			//notify mainthread
 			_suspend = true;
 			_mainThreadSem.Signal();
 		}
