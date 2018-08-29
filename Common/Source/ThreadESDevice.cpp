@@ -722,4 +722,11 @@ namespace RenderEngine {
 		}
 	}
 
+	void ThreadDoubleQueueESDevice::Cleanup()
+	{
+		_mainThreadSem.Signal();
+		_renderThreadSem.Signal();
+		ThreadESDevice::Cleanup();
+	}
+
 }

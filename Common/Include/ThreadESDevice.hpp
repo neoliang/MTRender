@@ -176,7 +176,7 @@ namespace RenderEngine {
 			delete _updateQueue;
 			delete _renderQueue;
 		}
-
+		void Cleanup();
 		virtual void BeginRender();
 		virtual void Present();
 		virtual void RunOneThreadCommand();
