@@ -692,7 +692,7 @@ namespace RenderEngine {
 	void ThreadDoubleQueueESDevice::Present()
 	{
 		ThreadESDevice::Present();
-		//wait for render thread to complete
+		//wait for render thread to be completed
 		if (!_suspend)
 		{
 			_mainThreadSem.WaitForSignal();

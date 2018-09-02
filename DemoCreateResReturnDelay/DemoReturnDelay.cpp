@@ -1,3 +1,3 @@
 #include "DemoBase.h"
 
-DemoBase demo(false,DemoBase::KThreadDoubleQueue);
+DemoBase demo(false,DemoBase::kThreadBuffer);

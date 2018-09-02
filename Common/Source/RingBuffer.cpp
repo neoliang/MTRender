@@ -52,16 +52,6 @@ void RingBuffer::Destroy()
 	SetDefaults();
 }
 
-RingBuffer::size_t RingBuffer::GetCurrentSize() const
-{
-	return m_BufferSize;
-}
-
-const void*	RingBuffer::GetBuffer() const
-{
-	//Assert(m_Mode != kModeThreaded);
-	return m_Buffer;
-}
 
 void RingBuffer::ReadStreamingData(void* data, size_t size, size_t alignment, size_t step)
 {
@@ -152,16 +142,6 @@ void RingBuffer::SetDefaults()
 	m_NeedsReadSignal = 0;
 	m_NeedsWriteSignal = 0;
 };
-
-bool RingBuffer::HasDataToRead() const
-{
-	if (m_Reader->bufferWraps == m_Writer->checkedWraps)
-	{
-		return (m_Reader->bufferPos < m_Writer->checkedPos) || (m_Reader->bufferPos < m_Reader->bufferEnd);
-	}
-	else
-		return true;
-}
 
 inline int AtomicIncrement(int volatile* i)
 {
